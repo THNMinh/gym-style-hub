@@ -23,7 +23,7 @@ function Index() {
     <>
       <HomeHero />
       <CategoryStrip />
-      <ProductRail title="Bán chạy nhất" sort="popular" />
+      <ProductRail title="Bán chạy nhất" sort="rating" />
       <ValueProps />
       <ProductRail title="Hàng mới về" sort="newest" />
     </>
