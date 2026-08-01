@@ -18,7 +18,7 @@ export function ProductRail({
 }) {
   const query = useQuery({
     queryKey: ["rail", title, gender, sort],
-    queryFn: () => getProducts({ gender, sort }),
+    queryFn: () => getProducts({ ...(gender ? { gender } : {}), sort }),
   });
 
   const products = (query.data ?? []).slice(0, limit);
