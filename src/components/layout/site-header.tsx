@@ -81,7 +81,7 @@ export function SiteHeader() {
           className="ml-auto hidden w-72 items-center gap-2 border border-input px-3 md:flex"
           onSubmit={(event) => {
             event.preventDefault();
-            window.location.href = `/products?search=${encodeURIComponent(search)}`;
+            window.location.href = `/products?q=${encodeURIComponent(search)}`;
           }}
         >
           <Search className="size-4 text-muted-foreground" />
