@@ -43,6 +43,9 @@ function filterProducts(query: ProductListQuery): Product[] {
       const colors = new Set(product.variants.map((v) => v.colorName));
       if (!query.colors.some((c) => colors.has(c))) return false;
     }
+    if (query.fitTypes?.length && !query.fitTypes.includes(product.fitType ?? "")) {
+      return false;
+    }
     if (query.sizes?.length) {
       const sizes = new Set(product.variants.filter((v) => v.available > 0).map((v) => v.size));
       if (!query.sizes.some((s) => sizes.has(s))) return false;
@@ -96,4 +99,14 @@ export function getAllColors(): { name: string; hex: string }[] {
 
 export function getAllSizes(): string[] {
   return ["XS", "S", "M", "L", "XL"];
+}
+
+export function getAllFitTypes(): string[] {
+  return [...new Set(MOCK_PRODUCTS.map((p) => p.fitType).filter((f): f is string => !!f))];
+}
+
+export function getCategoryOptions(): { slug: string; name: string }[] {
+  return [...MOCK_CATEGORIES]
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map((c) => ({ slug: c.slug, name: c.name }));
 }

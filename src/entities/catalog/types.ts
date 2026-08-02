@@ -67,6 +67,7 @@ export interface ProductListQuery {
   search?: string;
   colors?: string[];
   sizes?: string[];
+  fitTypes?: string[];
   sort?: ProductSort;
 }
 
