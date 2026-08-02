@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getProducts } from "@/entities/catalog/services";
 import type { Gender } from "@/entities/catalog/types";
 import { ProductGrid } from "./product-grid";
-import { CatalogFilterBar, type CatalogFilters } from "./catalog-filter-bar";
+import { CatalogFilterBar, EMPTY_FILTERS, type CatalogFilters } from "./catalog-filter-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function ProductListFeature({
@@ -14,10 +14,8 @@ export function ProductListFeature({
   search?: string;
 }) {
   const [filters, setFilters] = useState<CatalogFilters>({
+    ...EMPTY_FILTERS,
     gender: initialGender,
-    colors: [],
-    sizes: [],
-    sort: "featured",
   });
 
   const query = useQuery({
@@ -27,7 +25,9 @@ export function ProductListFeature({
         gender: filters.gender,
         colors: filters.colors,
         sizes: filters.sizes,
+        fitTypes: filters.fitTypes,
         sort: filters.sort,
+        ...(filters.categorySlug ? { categorySlug: filters.categorySlug } : {}),
         ...(search ? { search } : {}),
       }),
   });
