@@ -1,33 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { getProductBySlug } from "@/entities/catalog/services";
+import { getProductById } from "@/entities/catalog/services";
 import { ProductDetailFeature } from "@/features/catalog/components/product-detail-feature";
 
 export const Route = createFileRoute("/products/$slug")({
-  head: ({ params }) => {
-    const name = params.slug.replace(/-/g, " ");
-    return {
-      meta: [
-        { title: `${name} — GYMSHARK VN` },
-        {
-          name: "description",
-          content: `Chi tiết sản phẩm ${name}: chất liệu, size, đánh giá và hướng dẫn chọn size.`,
-        },
-        { property: "og:title", content: `${name} — GYMSHARK VN` },
-        { property: "og:description", content: `Chi tiết sản phẩm ${name}.` },
-        { property: "og:type", content: "website" },
-        { name: "twitter:card", content: "summary_large_image" },
-      ],
-    };
-  },
+  head: () => ({
+    meta: [
+      { title: "Chi tiết sản phẩm — GYMSHARK VN" },
+      {
+        name: "description",
+        content: "Chi tiết sản phẩm: hình ảnh, thông tin và hướng dẫn chọn mua.",
+      },
+      { property: "og:title", content: "Chi tiết sản phẩm — GYMSHARK VN" },
+      { property: "og:description", content: "Xem thông tin chi tiết sản phẩm." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: ProductDetailPage,
 });
 
 function ProductDetailPage() {
-  const { slug } = Route.useParams();
+  const { slug: productId } = Route.useParams();
   const query = useQuery({
-    queryKey: ["product", slug],
-    queryFn: () => getProductBySlug(slug),
+    queryKey: ["product", productId],
+    queryFn: () => getProductById(productId),
   });
 
   if (query.isPending) {

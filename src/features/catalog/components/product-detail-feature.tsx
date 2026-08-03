@@ -27,6 +27,20 @@ export function ProductDetailFeature({ product }: { product: Product }) {
     () => [...new Map(product.variants.map((v) => [v.colorName, v.colorHex])).entries()],
     [product],
   );
+  const hasVariantData = product.variants.length > 0;
+  const imageList =
+    product.images.length > 0
+      ? product.images
+      : [
+          {
+            imageId: `${product.productId}-placeholder`,
+            productId: product.productId,
+            variantId: null,
+            imageUrl: "https://placehold.co/900x1200?text=No+Image",
+            displayOrder: 1,
+            isPrimary: true,
+          },
+        ];
   const [color, setColor] = useState(colors[0]?.[0] ?? "");
   const [size, setSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -34,9 +48,10 @@ export function ProductDetailFeature({ product }: { product: Product }) {
 
   const sizesForColor = product.variants.filter((v) => v.colorName === color);
   const selectedVariant = sizesForColor.find((v) => v.size === size) ?? null;
-  const price = selectedVariant?.price ?? Math.min(...sizesForColor.map((v) => v.price));
+  const fallbackVariant = product.variants[0] ?? null;
+  const price = selectedVariant?.price ?? fallbackVariant?.price ?? null;
   const original = selectedVariant?.originalPrice ?? sizesForColor[0]?.originalPrice ?? null;
-  const off = discountPercent(price, original);
+  const off = price != null ? discountPercent(price, original) : 0;
   const liked = hydrated && wishlist.includes(product.productId);
 
   const related = useQuery({
@@ -74,7 +89,7 @@ export function ProductDetailFeature({ product }: { product: Product }) {
       <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr]">
         <div className="grid gap-3 md:grid-cols-[88px_1fr]">
           <div className="order-2 flex gap-3 md:order-1 md:flex-col">
-            {product.images.map((image, index) => (
+            {imageList.map((image, index) => (
               <button
                 key={image.imageId}
                 type="button"
@@ -95,7 +110,7 @@ export function ProductDetailFeature({ product }: { product: Product }) {
           </div>
           <div className="order-1 bg-muted md:order-2">
             <img
-              src={product.images[activeImage]?.imageUrl}
+              src={imageList[activeImage]?.imageUrl}
               alt={product.name}
               width={900}
               height={1200}
@@ -109,7 +124,11 @@ export function ProductDetailFeature({ product }: { product: Product }) {
           <Rating value={product.ratingAverage} count={product.reviewCount} className="mt-3" />
 
           <div className="mt-4 flex items-center gap-3">
-            <span className={cn("text-2xl font-bold", off && "text-sale")}>{formatPrice(price)}</span>
+              {price != null ? (
+                <span className={cn("text-2xl font-bold", off && "text-sale")}>{formatPrice(price)}</span>
+              ) : (
+                <span className="text-2xl font-bold">Liên hệ</span>
+              )}
             {original ? (
               <span className="text-base text-muted-foreground line-through">
                 {formatPrice(original)}
@@ -122,83 +141,98 @@ export function ProductDetailFeature({ product }: { product: Product }) {
 
           <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{product.description}</p>
 
-          <div className="mt-8">
-            <p className="eyebrow">
-              Màu: <span className="text-muted-foreground">{color}</span>
-            </p>
-            <div className="mt-3 flex gap-3">
-              {colors.map(([name, hex]) => (
-                <button
-                  key={name}
-                  type="button"
-                  aria-label={name}
-                  onClick={() => {
-                    setColor(name);
-                    setSize(null);
-                  }}
-                  className={cn(
-                    "size-9 rounded-full border-2",
-                    color === name ? "border-primary" : "border-border",
-                  )}
-                  style={{ backgroundColor: hex ?? undefined }}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-8">
-            <div className="flex items-center justify-between">
-              <p className="eyebrow">Size</p>
-              <SizeGuideDialog rows={product.sizeGuide} />
-            </div>
-            <div className="mt-3 grid grid-cols-5 gap-2">
-              {sizesForColor.map((variant) => {
-                const soldOut = variant.available <= 0;
-                return (
+          {hasVariantData ? (
+            <div className="mt-8">
+              <p className="eyebrow">
+                Màu: <span className="text-muted-foreground">{color}</span>
+              </p>
+              <div className="mt-3 flex gap-3">
+                {colors.map(([name, hex]) => (
                   <button
-                    key={variant.variantId}
+                    key={name}
                     type="button"
-                    disabled={soldOut}
-                    onClick={() => setSize(variant.size)}
+                    aria-label={name}
+                    onClick={() => {
+                      setColor(name);
+                      setSize(null);
+                    }}
                     className={cn(
-                      "border py-3 text-sm font-semibold transition-colors",
-                      size === variant.size
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border hover:bg-accent",
-                      soldOut && "cursor-not-allowed text-muted-foreground/50 line-through hover:bg-transparent",
+                      "size-9 rounded-full border-2",
+                      color === name ? "border-primary" : "border-border",
                     )}
-                  >
-                    {variant.size}
-                  </button>
-                );
-              })}
+                    style={{ backgroundColor: hex ?? undefined }}
+                  />
+                ))}
+              </div>
             </div>
-            {selectedVariant && selectedVariant.available > 0 && selectedVariant.available <= 8 ? (
-              <p className="mt-2 text-xs text-sale">Chỉ còn {selectedVariant.available} sản phẩm</p>
-            ) : null}
-          </div>
+          ) : null}
+
+          {hasVariantData ? (
+            <div className="mt-8">
+              <div className="flex items-center justify-between">
+                <p className="eyebrow">Size</p>
+                <SizeGuideDialog rows={product.sizeGuide} />
+              </div>
+              <div className="mt-3 grid grid-cols-5 gap-2">
+                {sizesForColor.map((variant) => {
+                  const soldOut = variant.available <= 0;
+                  return (
+                    <button
+                      key={variant.variantId}
+                      type="button"
+                      disabled={soldOut}
+                      onClick={() => setSize(variant.size)}
+                      className={cn(
+                        "border py-3 text-sm font-semibold transition-colors",
+                        size === variant.size
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border hover:bg-accent",
+                        soldOut && "cursor-not-allowed text-muted-foreground/50 line-through hover:bg-transparent",
+                      )}
+                    >
+                      {variant.size}
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedVariant && selectedVariant.available > 0 && selectedVariant.available <= 8 ? (
+                <p className="mt-2 text-xs text-sale">Chỉ còn {selectedVariant.available} sản phẩm</p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-6 text-sm text-muted-foreground">
+              Phiên bản API hiện tại chưa trả biến thể size/màu nên chưa thể thêm vào giỏ trực tiếp.
+            </p>
+          )}
 
           <div className="mt-8 flex items-center gap-3">
-            <div className="flex items-center border border-border">
-              <button
-                type="button"
-                aria-label="Giảm"
-                className="grid size-11 place-items-center"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              >
-                <Minus className="size-4" />
-              </button>
-              <span className="w-10 text-center text-sm font-semibold">{quantity}</span>
-              <button
-                type="button"
-                aria-label="Tăng"
-                className="grid size-11 place-items-center"
-                onClick={() => setQuantity((q) => q + 1)}
-              >
-                <Plus className="size-4" />
-              </button>
-            </div>
-            <Button size="lg" className="h-11 flex-1 text-sm" onClick={handleAdd}>
+            {hasVariantData ? (
+              <div className="flex items-center border border-border">
+                <button
+                  type="button"
+                  aria-label="Giảm"
+                  className="grid size-11 place-items-center"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                >
+                  <Minus className="size-4" />
+                </button>
+                <span className="w-10 text-center text-sm font-semibold">{quantity}</span>
+                <button
+                  type="button"
+                  aria-label="Tăng"
+                  className="grid size-11 place-items-center"
+                  onClick={() => setQuantity((q) => q + 1)}
+                >
+                  <Plus className="size-4" />
+                </button>
+              </div>
+            ) : null}
+            <Button
+              size="lg"
+              className="h-11 flex-1 text-sm"
+              onClick={handleAdd}
+              disabled={!hasVariantData}
+            >
               Thêm vào giỏ
             </Button>
             <button
@@ -229,7 +263,7 @@ export function ProductDetailFeature({ product }: { product: Product }) {
               <AccordionContent className="space-y-1 text-sm text-muted-foreground">
                 <p>Kiểu dáng: {product.fitType}</p>
                 <p>Giới tính: {product.gender}</p>
-                <p>SKU: {selectedVariant?.sku ?? sizesForColor[0]?.sku}</p>
+                <p>SKU: {selectedVariant?.sku ?? sizesForColor[0]?.sku ?? "N/A"}</p>
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="care">

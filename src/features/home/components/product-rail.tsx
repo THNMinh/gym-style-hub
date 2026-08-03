@@ -18,10 +18,10 @@ export function ProductRail({
 }) {
   const query = useQuery({
     queryKey: ["rail", title, gender, sort],
-    queryFn: () => getProducts({ ...(gender ? { gender } : {}), sort }),
+    queryFn: () => getProducts({ ...(gender ? { gender } : {}), sort, page: 1, pageSize: limit }),
   });
 
-  const products = (query.data ?? []).slice(0, limit);
+  const products = (query.data?.items ?? []).slice(0, limit);
 
   return (
     <section className="mx-auto max-w-[1600px] px-4 py-14 lg:px-8">

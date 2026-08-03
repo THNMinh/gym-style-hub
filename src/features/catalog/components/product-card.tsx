@@ -22,7 +22,7 @@ export function ProductCard({ product }: { product: Product }) {
     <article className="group relative">
       <Link
         to="/products/$slug"
-        params={{ slug: product.slug }}
+        params={{ slug: product.productId }}
         className="block overflow-hidden bg-muted"
       >
         <img
@@ -49,7 +49,7 @@ export function ProductCard({ product }: { product: Product }) {
       ) : null}
 
       <div className="mt-3 space-y-1.5">
-        <Link to="/products/$slug" params={{ slug: product.slug }} className="block">
+        <Link to="/products/$slug" params={{ slug: product.productId }} className="block">
           <h3 className="text-sm font-bold tracking-tight">{product.name}</h3>
         </Link>
         <p className="text-xs text-muted-foreground">{product.fitType}</p>

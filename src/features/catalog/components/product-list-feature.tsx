@@ -5,6 +5,7 @@ import type { Gender } from "@/entities/catalog/types";
 import { ProductGrid } from "./product-grid";
 import { CatalogFilterBar, EMPTY_FILTERS, type CatalogFilters } from "./catalog-filter-bar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 export function ProductListFeature({
   initialGender = "All",
@@ -13,13 +14,15 @@ export function ProductListFeature({
   initialGender?: Gender | "All";
   search?: string;
 }) {
+  const PAGE_SIZE = 12;
   const [filters, setFilters] = useState<CatalogFilters>({
     ...EMPTY_FILTERS,
     gender: initialGender,
   });
+  const [page, setPage] = useState(1);
 
   const query = useQuery({
-    queryKey: ["products", filters, search],
+    queryKey: ["products", filters, search, page],
     queryFn: () =>
       getProducts({
         gender: filters.gender,
@@ -27,12 +30,22 @@ export function ProductListFeature({
         sizes: filters.sizes,
         fitTypes: filters.fitTypes,
         sort: filters.sort,
+        page,
+        pageSize: PAGE_SIZE,
         ...(filters.categorySlug ? { categorySlug: filters.categorySlug } : {}),
         ...(search ? { search } : {}),
       }),
+    placeholderData: (previous) => previous,
   });
 
-  const products = useMemo(() => query.data ?? [], [query.data]);
+  const products = useMemo(() => query.data?.items ?? [], [query.data]);
+  const total = query.data?.totalCount ?? 0;
+  const totalPages = query.data?.totalPages ?? 1;
+
+  function handleFilterChange(next: Partial<CatalogFilters>) {
+    setFilters((prev) => ({ ...prev, ...next }));
+    setPage(1);
+  }
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-10 lg:px-8">
@@ -47,8 +60,8 @@ export function ProductListFeature({
 
       <CatalogFilterBar
         filters={filters}
-        total={products.length}
-        onChange={(next) => setFilters((prev) => ({ ...prev, ...next }))}
+        total={total}
+        onChange={handleFilterChange}
       />
 
       <div className="mt-10">
@@ -66,6 +79,30 @@ export function ProductListFeature({
           <ProductGrid products={products} />
         )}
       </div>
+
+      {!query.isPending && totalPages > 1 ? (
+        <div className="mt-10 flex items-center justify-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Trước
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Trang {page}/{totalPages}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            Sau
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

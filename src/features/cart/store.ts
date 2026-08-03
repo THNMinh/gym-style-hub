@@ -29,7 +29,7 @@ export const useCartStore = create<CartState>()(
             cartItemId: crypto.randomUUID(),
             variantId: variant.variantId,
             productId: product.productId,
-            slug: product.slug,
+            slug: product.productId,
             productName: product.name,
             sku: variant.sku,
             colorName: variant.colorName,

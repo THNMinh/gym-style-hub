@@ -63,12 +63,23 @@ export interface Product {
 
 export interface ProductListQuery {
   categorySlug?: string;
+  categoryId?: string;
   gender?: Gender | "All";
   search?: string;
   colors?: string[];
   sizes?: string[];
   fitTypes?: string[];
   sort?: ProductSort;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export type ProductSort = "featured" | "price-asc" | "price-desc" | "newest" | "rating";
