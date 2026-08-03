@@ -33,3 +33,16 @@ export interface Credentials {
 export interface RegisterPayload extends Credentials {
   fullName: string;
 }
+
+export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface RegisterResponse {
+  userId: string;
+  email: string;
+  fullName: string;
+  role: UserRole | string;
+  createdAt: string;
+}

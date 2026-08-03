@@ -1,5 +1,4 @@
-import { mock, request } from "@/core/lib/api-client";
-import { useMockData } from "@/core/config/env";
+import { mock } from "@/core/lib/api-client";
 import type { CartLine, Coupon, Order, OrderStatus, PaymentMethod } from "./types";
 
 export const MOCK_COUPONS: Coupon[] = [
@@ -94,18 +93,15 @@ const MOCK_ORDERS: Order[] = [
 ];
 
 export async function getOrders(): Promise<Order[]> {
-  if (useMockData) return mock(MOCK_ORDERS);
-  return request<Order[]>("/orders");
+  return mock(MOCK_ORDERS);
 }
 
 export async function getOrderByCode(code: string): Promise<Order | null> {
-  if (useMockData) return mock(MOCK_ORDERS.find((o) => o.orderCode === code) ?? null);
-  return request<Order | null>(`/orders/${code}`);
+  return mock(MOCK_ORDERS.find((o) => o.orderCode === code) ?? null);
 }
 
 export async function applyCoupon(code: string, subTotal: number): Promise<Coupon> {
   const coupon = MOCK_COUPONS.find((c) => c.code.toLowerCase() === code.trim().toLowerCase());
-  if (!useMockData) return request<Coupon>(`/promotions/coupons/${code}?subTotal=${subTotal}`);
   if (!coupon || !coupon.isActive) throw new Error("Mã giảm giá không hợp lệ");
   if (subTotal < coupon.minOrderValue) throw new Error("Đơn hàng chưa đạt giá trị tối thiểu");
   return mock(coupon);
@@ -129,8 +125,6 @@ export interface PlaceOrderPayload {
 }
 
 export async function placeOrder(payload: PlaceOrderPayload): Promise<Order> {
-  if (!useMockData) return request<Order>("/orders", { method: "POST", body: payload });
-
   const now = new Date().toISOString();
   const status: OrderStatus = "Pending";
   const order: Order = {

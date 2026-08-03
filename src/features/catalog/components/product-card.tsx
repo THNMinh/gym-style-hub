@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
+import { toast } from "sonner";
 import type { Product } from "@/entities/catalog/types";
 import { discountPercent, formatPrice } from "@/shared/lib/format";
 import { Rating } from "@/shared/ui/rating";
 import { useWishlistStore } from "@/features/wishlist/store";
+import { useAuthStore } from "@/features/auth/store";
 import { useHydrated } from "@/shared/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +13,7 @@ export function ProductCard({ product }: { product: Product }) {
   const hydrated = useHydrated();
   const wishlist = useWishlistStore((s) => s.productIds);
   const toggle = useWishlistStore((s) => s.toggle);
+  const user = useAuthStore((s) => s.user);
 
   const price = Math.min(...product.variants.map((v) => v.price));
   const original = product.variants[0]?.originalPrice ?? null;
@@ -36,7 +39,13 @@ export function ProductCard({ product }: { product: Product }) {
       <button
         type="button"
         aria-label="Thêm vào yêu thích"
-        onClick={() => toggle(product.productId)}
+        onClick={() => {
+          if (!user) {
+            toast.error("Vui lòng đăng nhập để thêm vào wishlist");
+            return;
+          }
+          toggle(product.productId);
+        }}
         className="absolute right-3 top-3 grid size-9 place-items-center bg-background/85 backdrop-blur transition-colors hover:bg-background"
       >
         <Heart className={cn("size-4", liked && "fill-current")} />

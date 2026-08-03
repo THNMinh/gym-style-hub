@@ -5,18 +5,34 @@ import { useWishlistStore } from "../store";
 import { ProductGrid } from "@/features/catalog/components/product-grid";
 import { Button } from "@/components/ui/button";
 import { useHydrated } from "@/shared/hooks/use-hydrated";
+import { useAuthStore } from "@/features/auth/store";
 
 export function WishlistFeature() {
   const hydrated = useHydrated();
   const productIds = useWishlistStore((s) => s.productIds);
+  const user = useAuthStore((s) => s.user);
 
   const query = useQuery({
     queryKey: ["wishlist", productIds],
     queryFn: () => getProductsByIds(productIds),
-    enabled: hydrated && productIds.length > 0,
+    enabled: hydrated && !!user && productIds.length > 0,
   });
 
   if (!hydrated) return <div className="min-h-[50vh]" />;
+
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-[1600px] px-4 py-12 lg:px-8">
+        <h1 className="text-4xl">Yêu thích</h1>
+        <div className="py-20 text-center">
+          <p className="text-sm text-muted-foreground">Vui lòng đăng nhập để dùng danh sách yêu thích.</p>
+          <Button asChild className="mt-6">
+            <Link to="/auth">Đăng nhập</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-12 lg:px-8">

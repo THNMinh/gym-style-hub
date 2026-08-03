@@ -44,7 +44,12 @@ type BackendProductDetail = {
 function toGender(value: string): "Men" | "Women" | "Unisex" {
   const normalized = value.trim().toLowerCase();
   if (normalized === "men" || normalized === "male" || normalized === "nam") return "Men";
-  if (normalized === "women" || normalized === "female" || normalized === "nu" || normalized === "nữ") {
+  if (
+    normalized === "women" ||
+    normalized === "female" ||
+    normalized === "nu" ||
+    normalized === "ná»¯"
+  ) {
     return "Women";
   }
   return "Unisex";
@@ -122,7 +127,9 @@ function sortProducts(items: Product[], sort: ProductSort = "featured"): Product
     case "rating":
       return [...items].sort((a, b) => b.ratingAverage - a.ratingAverage);
     case "newest":
-      return [...items].sort((a, b) => Number(b.badges.includes("Mới")) - Number(a.badges.includes("Mới")));
+      return [...items].sort(
+        (a, b) => Number(b.badges.includes("Má»›i")) - Number(a.badges.includes("Má»›i")),
+      );
     default:
       return [...items].sort((a, b) => b.reviewCount - a.reviewCount);
   }
@@ -187,7 +194,7 @@ export async function getProducts(query: ProductListQuery = {}): Promise<PagedRe
   const params = new URLSearchParams();
   if (query.search) params.set("searchName", query.search);
   if (query.gender && query.gender !== "All") params.set("gender", query.gender);
-  if (query.fitTypes?.length) params.set("fitType", query.fitTypes[0]);
+  if (query.fitTypes?.length) params.set("fitType", query.fitTypes[0] ?? "");
   if (query.categoryId) params.set("categoryId", query.categoryId);
   params.set("page", String(query.page ?? 1));
   params.set("pageSize", String(query.pageSize ?? 12));
@@ -204,7 +211,8 @@ export async function getProducts(query: ProductListQuery = {}): Promise<PagedRe
 
 export async function getProductById(productId: string): Promise<Product | null> {
   if (useMockData) {
-    const found = MOCK_PRODUCTS.find((p) => p.productId === productId || p.slug === productId) ?? null;
+    const found =
+      MOCK_PRODUCTS.find((p) => p.productId === productId || p.slug === productId) ?? null;
     return mock(found);
   }
 
@@ -212,7 +220,11 @@ export async function getProductById(productId: string): Promise<Product | null>
     const detail = await request<BackendProductDetail>(`/api/products/${productId}`);
     return mapDetailToProduct(detail);
   } catch (error) {
-    if (error instanceof Error && "status" in error && (error as { status?: number }).status === 404) {
+    if (
+      error instanceof Error &&
+      "status" in error &&
+      (error as { status?: number }).status === 404
+    ) {
       return null;
     }
     throw error;

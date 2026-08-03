@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { login, register } from "@/entities/identity/services";
+import type { LoginResponse, RegisterResponse, User } from "@/entities/identity/types";
 import { useAuthStore } from "../store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,17 +12,51 @@ import { cn } from "@/lib/utils";
 
 export function AuthFeature() {
   const navigate = useNavigate();
-  const setUser = useAuthStore((s) => s.setUser);
+  const setSession = useAuthStore((s) => s.setSession);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [form, setForm] = useState({ email: "", password: "", fullName: "" });
 
+  function toCustomerUser(email: string, fullName: string | null): User {
+    return {
+      userId: email,
+      email,
+      fullName,
+      phone: null,
+      avatarUrl: null,
+      role: "Customer",
+      isEmailVerified: false,
+    };
+  }
+
+  type AuthResult =
+    | { mode: "login"; response: LoginResponse }
+    | { mode: "register"; response: RegisterResponse };
+
   const mutation = useMutation({
-    mutationFn: () =>
-      mode === "login"
-        ? login({ email: form.email, password: form.password })
-        : register({ email: form.email, password: form.password, fullName: form.fullName }),
-    onSuccess: (user) => {
-      setUser(user);
+    mutationFn: async (): Promise<AuthResult> => {
+      if (mode === "login") {
+        return { mode: "login", response: await login({ email: form.email, password: form.password }) };
+      }
+
+      return {
+        mode: "register",
+        response: await register({ email: form.email, password: form.password, fullName: form.fullName }),
+      };
+    },
+    onSuccess: (result) => {
+      if (result.mode === "login") {
+        setSession({
+          user: toCustomerUser(form.email, null),
+          accessToken: result.response.accessToken,
+          refreshToken: result.response.refreshToken,
+        });
+      } else {
+        setSession({
+          user: toCustomerUser(result.response.email, result.response.fullName),
+          accessToken: null,
+          refreshToken: null,
+        });
+      }
       toast.success(mode === "login" ? "Đăng nhập thành công" : "Tạo tài khoản thành công");
       navigate({ to: "/account" });
     },
@@ -82,7 +117,7 @@ export function AuthFeature() {
             id="password"
             type="password"
             required
-            minLength={6}
+            minLength={8}
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
@@ -93,7 +128,7 @@ export function AuthFeature() {
       </form>
 
       <p className="mt-6 text-xs text-muted-foreground">
-        Bản demo dùng dữ liệu mock: nhập email bất kỳ và mật khẩu từ 6 ký tự.
+        Mật khẩu đăng ký phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số.
       </p>
     </div>
   );

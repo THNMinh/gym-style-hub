@@ -10,6 +10,7 @@ import { Rating } from "@/shared/ui/rating";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useCartStore } from "@/features/cart/store";
+import { useAuthStore } from "@/features/auth/store";
 import { useWishlistStore } from "@/features/wishlist/store";
 import { useHydrated } from "@/shared/hooks/use-hydrated";
 import { SizeGuideDialog } from "./size-guide-dialog";
@@ -22,6 +23,7 @@ export function ProductDetailFeature({ product }: { product: Product }) {
   const addItem = useCartStore((s) => s.addItem);
   const wishlist = useWishlistStore((s) => s.productIds);
   const toggleWishlist = useWishlistStore((s) => s.toggle);
+  const user = useAuthStore((s) => s.user);
 
   const colors = useMemo(
     () => [...new Map(product.variants.map((v) => [v.colorName, v.colorHex])).entries()],
@@ -238,7 +240,13 @@ export function ProductDetailFeature({ product }: { product: Product }) {
             <button
               type="button"
               aria-label="Yêu thích"
-              onClick={() => toggleWishlist(product.productId)}
+              onClick={() => {
+                if (!user) {
+                  toast.error("Vui lòng đăng nhập để thêm vào wishlist");
+                  return;
+                }
+                toggleWishlist(product.productId);
+              }}
               className="grid size-11 place-items-center border border-border"
             >
               <Heart className={cn("size-4", liked && "fill-current")} />

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Heart, Menu, Search, ShoppingBag, User } from "lucide-react";
 import { useState } from "react";
+import { useEffect } from "react";
 import { AnnouncementBar } from "./announcement-bar";
 import { useCartStore, cartCount } from "@/features/cart/store";
 import { useWishlistStore } from "@/features/wishlist/store";
@@ -29,9 +30,16 @@ export function SiteHeader() {
   const hydrated = useHydrated();
   const lines = useCartStore((s) => s.lines);
   const wishlist = useWishlistStore((s) => s.productIds);
+  const clearWishlist = useWishlistStore((s) => s.clear);
   const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (hydrated && !user) {
+      clearWishlist();
+    }
+  }, [clearWishlist, hydrated, user]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background">
@@ -102,7 +110,7 @@ export function SiteHeader() {
           </Link>
           <Link to="/wishlist" aria-label="Yêu thích" className="relative">
             <Heart className="size-5" />
-            <CountBadge value={hydrated ? wishlist.length : 0} />
+            <CountBadge value={hydrated && user ? wishlist.length : 0} />
           </Link>
           <Link to="/cart" aria-label="Giỏ hàng" className="relative">
             <ShoppingBag className="size-5" />
