@@ -1,6 +1,7 @@
+import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { getProductsByIds } from "@/entities/catalog/services";
+import { getMyWishlist, mapWishlistItemToProduct } from "../services";
 import { useWishlistStore } from "../store";
 import { ProductGrid } from "@/features/catalog/components/product-grid";
 import { Button } from "@/components/ui/button";
@@ -9,14 +10,20 @@ import { useAuthStore } from "@/features/auth/store";
 
 export function WishlistFeature() {
   const hydrated = useHydrated();
-  const productIds = useWishlistStore((s) => s.productIds);
+  const setProductIds = useWishlistStore((s) => s.setProductIds);
   const user = useAuthStore((s) => s.user);
 
   const query = useQuery({
-    queryKey: ["wishlist", productIds],
-    queryFn: () => getProductsByIds(productIds),
-    enabled: hydrated && !!user && productIds.length > 0,
+    queryKey: ["wishlist"],
+    queryFn: () => getMyWishlist(1, 100),
+    enabled: hydrated && !!user,
   });
+
+  useEffect(() => {
+    if (query.data?.items) {
+      setProductIds(query.data.items.map((item) => item.productId));
+    }
+  }, [query.data, setProductIds]);
 
   if (!hydrated) return <div className="min-h-[50vh]" />;
 
@@ -34,10 +41,14 @@ export function WishlistFeature() {
     );
   }
 
+  const products = (query.data?.items ?? []).map(mapWishlistItemToProduct);
+
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-12 lg:px-8">
       <h1 className="text-4xl">Yêu thích</h1>
-      {productIds.length === 0 ? (
+      {query.isLoading ? (
+        <div className="py-20 text-center text-sm text-muted-foreground">Đang tải danh sách yêu thích...</div>
+      ) : products.length === 0 ? (
         <div className="py-20 text-center">
           <p className="text-sm text-muted-foreground">Bạn chưa lưu sản phẩm nào.</p>
           <Button asChild className="mt-6">
@@ -48,7 +59,7 @@ export function WishlistFeature() {
         </div>
       ) : (
         <div className="mt-10">
-          <ProductGrid products={query.data ?? []} />
+          <ProductGrid products={products} />
         </div>
       )}
     </div>

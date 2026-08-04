@@ -1,4 +1,5 @@
 import { env, useMockData } from "@/core/config/env";
+import { useAuthStore } from "@/features/auth/store";
 
 export class ApiError extends Error {
   constructor(
@@ -18,11 +19,13 @@ type RequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, headers, ...rest } = options;
+  const token = useAuthStore.getState().accessToken;
 
   const response = await fetch(`${env.apiBaseUrl}${path}`, {
     ...rest,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(headers ?? {}),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Heart, Minus, Plus, ShieldCheck, Truck, Undo2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useCartStore } from "@/features/cart/store";
 import { useAuthStore } from "@/features/auth/store";
 import { useWishlistStore } from "@/features/wishlist/store";
+import { toggleWishlistApi } from "@/features/wishlist/services";
 import { useHydrated } from "@/shared/hooks/use-hydrated";
 import { SizeGuideDialog } from "./size-guide-dialog";
 import { ProductReviews } from "./product-reviews";
@@ -20,9 +21,11 @@ import { cn } from "@/lib/utils";
 
 export function ProductDetailFeature({ product }: { product: Product }) {
   const hydrated = useHydrated();
+  const queryClient = useQueryClient();
   const addItem = useCartStore((s) => s.addItem);
   const wishlist = useWishlistStore((s) => s.productIds);
-  const toggleWishlist = useWishlistStore((s) => s.toggle);
+  const addId = useWishlistStore((s) => s.addId);
+  const removeId = useWishlistStore((s) => s.removeId);
   const user = useAuthStore((s) => s.user);
 
   const colors = useMemo(
@@ -240,12 +243,34 @@ export function ProductDetailFeature({ product }: { product: Product }) {
             <button
               type="button"
               aria-label="Yêu thích"
-              onClick={() => {
+              onClick={async () => {
                 if (!user) {
-                  toast.error("Vui lòng đăng nhập để thêm vào wishlist");
+                  toast.error("Vui lòng đăng nhập để dùng danh sách yêu thích");
                   return;
                 }
-                toggleWishlist(product.productId);
+                const wasLiked = liked;
+                if (wasLiked) {
+                  removeId(product.productId);
+                } else {
+                  addId(product.productId);
+                }
+                try {
+                  const res = await toggleWishlistApi(product.productId);
+                  if (res.isAdded) {
+                    addId(product.productId);
+                  } else {
+                    removeId(product.productId);
+                  }
+                  toast.success(res.message || (res.isAdded ? "Đã thêm vào danh sách yêu thích" : "Đã xóa khỏi danh sách yêu thích"));
+                  queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+                } catch (err) {
+                  if (wasLiked) {
+                    addId(product.productId);
+                  } else {
+                    removeId(product.productId);
+                  }
+                  toast.error(err instanceof Error ? err.message : "Không thể cập nhật danh sách yêu thích");
+                }
               }}
               className="grid size-11 place-items-center border border-border"
             >

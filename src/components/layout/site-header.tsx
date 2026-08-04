@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Heart, Menu, Search, ShoppingBag, User } from "lucide-react";
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { AnnouncementBar } from "./announcement-bar";
 import { useCartStore, cartCount } from "@/features/cart/store";
 import { useWishlistStore } from "@/features/wishlist/store";
+import { getMyWishlist } from "@/features/wishlist/services";
 import { useAuthStore } from "@/features/auth/store";
 import { useHydrated } from "@/shared/hooks/use-hydrated";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -30,10 +31,23 @@ export function SiteHeader() {
   const hydrated = useHydrated();
   const lines = useCartStore((s) => s.lines);
   const wishlist = useWishlistStore((s) => s.productIds);
+  const setProductIds = useWishlistStore((s) => s.setProductIds);
   const clearWishlist = useWishlistStore((s) => s.clear);
   const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+
+  const wishlistQuery = useQuery({
+    queryKey: ["wishlist"],
+    queryFn: () => getMyWishlist(1, 100),
+    enabled: hydrated && !!user,
+  });
+
+  useEffect(() => {
+    if (wishlistQuery.data?.items) {
+      setProductIds(wishlistQuery.data.items.map((i) => i.productId));
+    }
+  }, [wishlistQuery.data, setProductIds]);
 
   useEffect(() => {
     if (hydrated && !user) {

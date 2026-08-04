@@ -1,18 +1,22 @@
 import { Link } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import type { Product } from "@/entities/catalog/types";
 import { discountPercent, formatPrice } from "@/shared/lib/format";
 import { Rating } from "@/shared/ui/rating";
 import { useWishlistStore } from "@/features/wishlist/store";
+import { toggleWishlistApi } from "@/features/wishlist/services";
 import { useAuthStore } from "@/features/auth/store";
 import { useHydrated } from "@/shared/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
 export function ProductCard({ product }: { product: Product }) {
   const hydrated = useHydrated();
+  const queryClient = useQueryClient();
   const wishlist = useWishlistStore((s) => s.productIds);
-  const toggle = useWishlistStore((s) => s.toggle);
+  const addId = useWishlistStore((s) => s.addId);
+  const removeId = useWishlistStore((s) => s.removeId);
   const user = useAuthStore((s) => s.user);
 
   const price = Math.min(...product.variants.map((v) => v.price));
@@ -20,6 +24,38 @@ export function ProductCard({ product }: { product: Product }) {
   const off = discountPercent(price, original);
   const colors = [...new Map(product.variants.map((v) => [v.colorName, v.colorHex])).entries()];
   const liked = hydrated && wishlist.includes(product.productId);
+
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để dùng danh sách yêu thích");
+      return;
+    }
+
+    const wasLiked = liked;
+    if (wasLiked) {
+      removeId(product.productId);
+    } else {
+      addId(product.productId);
+    }
+
+    try {
+      const res = await toggleWishlistApi(product.productId);
+      if (res.isAdded) {
+        addId(product.productId);
+      } else {
+        removeId(product.productId);
+      }
+      toast.success(res.message || (res.isAdded ? "Đã thêm vào danh sách yêu thích" : "Đã xóa khỏi danh sách yêu thích"));
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+    } catch (err) {
+      if (wasLiked) {
+        addId(product.productId);
+      } else {
+        removeId(product.productId);
+      }
+      toast.error(err instanceof Error ? err.message : "Không thể cập nhật danh sách yêu thích");
+    }
+  };
 
   return (
     <article className="group relative">
@@ -39,13 +75,7 @@ export function ProductCard({ product }: { product: Product }) {
       <button
         type="button"
         aria-label="Thêm vào yêu thích"
-        onClick={() => {
-          if (!user) {
-            toast.error("Vui lòng đăng nhập để thêm vào wishlist");
-            return;
-          }
-          toggle(product.productId);
-        }}
+        onClick={handleToggleWishlist}
         className="absolute right-3 top-3 grid size-9 place-items-center bg-background/85 backdrop-blur transition-colors hover:bg-background"
       >
         <Heart className={cn("size-4", liked && "fill-current")} />
