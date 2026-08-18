@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Heart, Menu, Search, ShoppingBag, User } from "lucide-react";
 import { useState, useEffect } from "react";
-import { AnnouncementBar } from "./announcement-bar";
 import { useCartStore, cartCount } from "@/features/cart/store";
 import { useWishlistStore } from "@/features/wishlist/store";
 import { getMyWishlist } from "@/features/wishlist/services";
@@ -57,7 +56,6 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background">
-      <AnnouncementBar />
       <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-4 px-4 lg:px-8">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger className="lg:hidden" aria-label="Mở menu">

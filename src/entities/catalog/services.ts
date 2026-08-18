@@ -21,6 +21,19 @@ type BackendProductsResponse = {
   totalPages: number;
 };
 
+type BackendProductVariant = {
+  variantId: string;
+  productId: string;
+  sku: string;
+  colorName: string;
+  colorHex: string | null;
+  size: string;
+  price: number;
+  originalPrice: number | null;
+  weightGrams: number | null;
+  available?: number;
+};
+
 type BackendProductDetail = {
   productId: string;
   categoryId: string;
@@ -39,6 +52,7 @@ type BackendProductDetail = {
     displayOrder: number;
     isPrimary: boolean;
   }[];
+  variants?: BackendProductVariant[];
 };
 
 function toGender(value: string): "Men" | "Women" | "Unisex" {
@@ -98,7 +112,30 @@ function mapListItemToProduct(item: BackendProductItem): Product {
   };
 }
 
-function mapDetailToProduct(detail: BackendProductDetail): Product {
+function mapVariantToProductVariant(v: BackendProductVariant): ProductVariant {
+  return {
+    variantId: v.variantId,
+    productId: v.productId,
+    sku: v.sku,
+    colorName: v.colorName,
+    colorHex: v.colorHex,
+    size: v.size,
+    price: v.price,
+    originalPrice: v.originalPrice,
+    weightGrams: v.weightGrams,
+    available: v.available ?? 1,
+  };
+}
+
+function mapDetailToProduct(
+  detail: BackendProductDetail,
+  extraVariants?: BackendProductVariant[],
+): Product {
+  const variants = (detail.variants && detail.variants.length > 0
+    ? detail.variants
+    : extraVariants ?? []
+  ).map(mapVariantToProductVariant);
+
   return {
     productId: detail.productId,
     categoryId: detail.categoryId,
@@ -108,7 +145,7 @@ function mapDetailToProduct(detail: BackendProductDetail): Product {
     fitType: detail.fitType,
     gender: toGender(detail.gender),
     isActive: detail.isActive,
-    variants: [],
+    variants,
     images: detail.images,
     sizeGuide: [],
     ratingAverage: 0,
@@ -218,7 +255,19 @@ export async function getProductById(productId: string): Promise<Product | null>
 
   try {
     const detail = await request<BackendProductDetail>(`/api/products/${productId}`);
-    return mapDetailToProduct(detail);
+    let extraVariants: BackendProductVariant[] = [];
+
+    if (!detail.variants || detail.variants.length === 0) {
+      try {
+        extraVariants = await request<BackendProductVariant[]>(
+          `/api/products/${detail.productId}/variants`,
+        );
+      } catch {
+        // bỏ qua nếu endpoint /variants rỗng hoặc chưa có dữ liệu
+      }
+    }
+
+    return mapDetailToProduct(detail, extraVariants);
   } catch (error) {
     if (
       error instanceof Error &&

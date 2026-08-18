@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Heart, Minus, Plus, ShieldCheck, Truck, Undo2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Heart, Minus, Plus, ShieldCheck, Truck, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Product } from "@/entities/catalog/types";
 import { getRelatedProducts } from "@/entities/catalog/services";
@@ -9,6 +9,7 @@ import { discountPercent, formatPrice } from "@/shared/lib/format";
 import { Rating } from "@/shared/ui/rating";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useCartStore } from "@/features/cart/store";
 import { useAuthStore } from "@/features/auth/store";
 import { useWishlistStore } from "@/features/wishlist/store";
@@ -33,29 +34,90 @@ export function ProductDetailFeature({ product }: { product: Product }) {
     [product],
   );
   const hasVariantData = product.variants.length > 0;
-  const imageList =
-    product.images.length > 0
-      ? product.images
-      : [
-          {
-            imageId: `${product.productId}-placeholder`,
-            productId: product.productId,
-            variantId: null,
-            imageUrl: "https://placehold.co/900x1200?text=No+Image",
-            displayOrder: 1,
-            isPrimary: true,
-          },
-        ];
-  const [color, setColor] = useState(colors[0]?.[0] ?? "");
+
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [size, setSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
+  const [zoomImageIndex, setZoomImageIndex] = useState<number | null>(null);
 
-  const sizesForColor = product.variants.filter((v) => v.colorName === color);
+  const galleryScrollRef = useRef<HTMLDivElement>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  // Lọc hình ảnh theo chuẩn Gymshark:
+  // - Nếu chưa chọn màu (null): Hiển thị ảnh sản phẩm gốc (!variantId) hoặc ảnh primary.
+  // - Khi click chọn màu: Chỉ hiển thị ảnh thuộc về variant/màu đó.
+  const imageList = useMemo(() => {
+    if (!product.images.length) {
+      return [
+        {
+          imageId: `${product.productId}-placeholder`,
+          productId: product.productId,
+          variantId: null,
+          imageUrl: "https://placehold.co/900x1200?text=No+Image",
+          displayOrder: 1,
+          isPrimary: true,
+        },
+      ];
+    }
+
+    if (selectedColor) {
+      const colorVariantIds = new Set(
+        product.variants.filter((v) => v.colorName === selectedColor).map((v) => v.variantId),
+      );
+      const variantImages = product.images.filter(
+        (img) => img.variantId && colorVariantIds.has(img.variantId),
+      );
+      if (variantImages.length > 0) return variantImages;
+    }
+
+    const generalImages = product.images.filter((img) => !img.variantId);
+    return generalImages.length > 0 ? generalImages : product.images;
+  }, [product.images, product.variants, selectedColor, product.productId]);
+
+  useEffect(() => {
+    setActiveImage(0);
+    if (galleryScrollRef.current) {
+      galleryScrollRef.current.scrollTop = 0;
+      setScrollProgress(0);
+    }
+  }, [selectedColor]);
+
+  // Cuộn container ảnh nội bộ của gallery
+  const handleGalleryScroll = () => {
+    if (!galleryScrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = galleryScrollRef.current;
+    const maxScroll = scrollHeight - clientHeight;
+    if (maxScroll > 0) {
+      setScrollProgress(scrollTop / maxScroll);
+    }
+  };
+
+  const scrollGallery = (direction: "up" | "down") => {
+    if (!galleryScrollRef.current) return;
+    const scrollAmount = galleryScrollRef.current.clientHeight * 0.7;
+    galleryScrollRef.current.scrollBy({
+      top: direction === "up" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
+
+  const sizesForColor = useMemo(
+    () => (selectedColor ? product.variants.filter((v) => v.colorName === selectedColor) : []),
+    [product.variants, selectedColor],
+  );
   const selectedVariant = sizesForColor.find((v) => v.size === size) ?? null;
   const fallbackVariant = product.variants[0] ?? null;
-  const price = selectedVariant?.price ?? fallbackVariant?.price ?? null;
-  const original = selectedVariant?.originalPrice ?? sizesForColor[0]?.originalPrice ?? null;
+  const price =
+    selectedVariant?.price ??
+    (selectedColor ? sizesForColor[0]?.price : null) ??
+    fallbackVariant?.price ??
+    null;
+  const original =
+    selectedVariant?.originalPrice ??
+    (selectedColor ? sizesForColor[0]?.originalPrice : null) ??
+    fallbackVariant?.originalPrice ??
+    null;
   const off = price != null ? discountPercent(price, original) : 0;
   const liked = hydrated && wishlist.includes(product.productId);
 
@@ -65,6 +127,10 @@ export function ProductDetailFeature({ product }: { product: Product }) {
   });
 
   function handleAdd() {
+    if (!selectedColor) {
+      toast.error("Vui lòng chọn màu sản phẩm");
+      return;
+    }
     if (!selectedVariant) {
       toast.error("Vui lòng chọn size");
       return;
@@ -74,7 +140,7 @@ export function ProductDetailFeature({ product }: { product: Product }) {
       return;
     }
     addItem(product, selectedVariant, quantity);
-    toast.success(`Đã thêm ${product.name} (${color} / ${selectedVariant.size}) vào giỏ`);
+    toast.success(`Đã thêm ${product.name} (${selectedColor} / ${selectedVariant.size}) vào giỏ`);
   }
 
   return (
@@ -91,36 +157,91 @@ export function ProductDetailFeature({ product }: { product: Product }) {
         <span className="text-foreground">{product.name}</span>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr]">
-        <div className="grid gap-3 md:grid-cols-[88px_1fr]">
-          <div className="order-2 flex gap-3 md:order-1 md:flex-col">
-            {imageList.map((image, index) => (
+      <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr] items-start">
+        {/* Left Column: Gymshark Local Scrollable Image Gallery Container */}
+        <div className="relative group/gallery">
+          {/* Gymshark Anchored Mini Scrollbar Control (Desktop) */}
+          {imageList.length > 2 && (
+            <div className="hidden lg:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 flex-col items-center gap-2 bg-background/85 backdrop-blur-md p-2 rounded-full border border-border shadow-md transition-opacity">
               <button
-                key={image.imageId}
                 type="button"
-                onClick={() => setActiveImage(index)}
+                aria-label="Cuộn lên"
+                onClick={() => scrollGallery("up")}
+                disabled={scrollProgress <= 0.02}
+                className="p-1 rounded-full hover:bg-accent disabled:opacity-30 transition-colors"
+              >
+                <ChevronUp className="size-4" />
+              </button>
+              <div className="w-1.5 h-20 bg-muted rounded-full relative overflow-hidden">
+                <div
+                  className="w-full bg-primary rounded-full transition-all duration-200"
+                  style={{
+                    height: "30%",
+                    transform: `translateY(${scrollProgress * 230}%)`,
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                aria-label="Cuộn xuống"
+                onClick={() => scrollGallery("down")}
+                disabled={scrollProgress >= 0.98}
+                className="p-1 rounded-full hover:bg-accent disabled:opacity-30 transition-colors"
+              >
+                <ChevronDown className="size-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Desktop/Tablet Bounded Scrollable 2-Column Grid (Gymshark Stack) */}
+          <div
+            ref={galleryScrollRef}
+            onScroll={handleGalleryScroll}
+            className="hidden md:grid md:grid-cols-2 gap-3 max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none rounded-xl pr-1"
+          >
+            {imageList.map((image, index) => (
+              <div
+                key={image.imageId}
+                id={`product-image-${index}`}
+                onClick={() => setZoomImageIndex(index)}
                 className={cn(
-                  "w-20 overflow-hidden border",
-                  index === activeImage ? "border-primary" : "border-transparent",
+                  "group/img relative bg-muted overflow-hidden cursor-zoom-in rounded-sm",
+                  imageList.length === 1 && "col-span-2",
+                  index === 0 && imageList.length % 2 !== 0 && "col-span-2",
                 )}
               >
                 <img
                   src={image.imageUrl}
                   alt={`${product.name} ${index + 1}`}
-                  loading="lazy"
-                  className="aspect-[3/4] w-full object-cover"
+                  loading={index < 2 ? "eager" : "lazy"}
+                  className="aspect-[3/4] w-full object-cover transition-transform duration-500 group-hover/img:scale-[1.03]"
                 />
-              </button>
+                {/* Gymshark '+' Zoom Icon Overlay */}
+                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                  <span className="size-10 rounded-full bg-background/90 text-foreground flex items-center justify-center shadow-lg transform scale-90 group-hover/img:scale-100 transition-transform">
+                    <Plus className="size-5" />
+                  </span>
+                </div>
+              </div>
             ))}
           </div>
-          <div className="order-1 bg-muted md:order-2">
-            <img
-              src={imageList[activeImage]?.imageUrl}
-              alt={product.name}
-              width={900}
-              height={1200}
-              className="aspect-[3/4] w-full object-cover"
-            />
+
+          {/* Mobile Horizontal Snap Slider */}
+          <div className="md:hidden flex overflow-x-auto snap-x snap-mandatory scrollbar-none gap-3 -mx-4 px-4">
+            {imageList.map((image, index) => (
+              <div
+                key={image.imageId}
+                onClick={() => setZoomImageIndex(index)}
+                className="w-[85vw] flex-shrink-0 snap-center bg-muted overflow-hidden rounded-sm cursor-zoom-in"
+              >
+                <img
+                  src={image.imageUrl}
+                  alt={`${product.name} ${index + 1}`}
+                  loading={index === 0 ? "eager" : "lazy"}
+                  className="aspect-[3/4] w-full object-cover"
+                />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -149,7 +270,10 @@ export function ProductDetailFeature({ product }: { product: Product }) {
           {hasVariantData ? (
             <div className="mt-8">
               <p className="eyebrow">
-                Màu: <span className="text-muted-foreground">{color}</span>
+                Màu:{" "}
+                <span className="text-muted-foreground">
+                  {selectedColor ?? "Chọn màu sản phẩm"}
+                </span>
               </p>
               <div className="mt-3 flex gap-3">
                 {colors.map(([name, hex]) => (
@@ -158,12 +282,12 @@ export function ProductDetailFeature({ product }: { product: Product }) {
                     type="button"
                     aria-label={name}
                     onClick={() => {
-                      setColor(name);
+                      setSelectedColor(name);
                       setSize(null);
                     }}
                     className={cn(
-                      "size-9 rounded-full border-2",
-                      color === name ? "border-primary" : "border-border",
+                      "size-9 rounded-full border-2 transition-transform hover:scale-105",
+                      selectedColor === name ? "border-primary ring-2 ring-primary/30" : "border-border",
                     )}
                     style={{ backgroundColor: hex ?? undefined }}
                   />
@@ -329,6 +453,60 @@ export function ProductDetailFeature({ product }: { product: Product }) {
           </div>
         </section>
       ) : null}
+
+      {/* Gymshark Image Zoom Lightbox Modal */}
+      <Dialog open={zoomImageIndex !== null} onOpenChange={(open) => !open && setZoomImageIndex(null)}>
+        <DialogContent className="max-w-6xl w-[95vw] h-[92vh] p-0 bg-black/95 border-none flex items-center justify-center overflow-hidden">
+          {zoomImageIndex !== null && imageList[zoomImageIndex] && (
+            <div className="relative w-full h-full flex items-center justify-center p-4">
+              <img
+                src={imageList[zoomImageIndex].imageUrl}
+                alt={product.name}
+                className="max-h-[85vh] max-w-[85vw] object-contain transition-transform duration-300 select-none"
+              />
+
+              {/* Prev Button */}
+              {imageList.length > 1 && (
+                <button
+                  type="button"
+                  aria-label="Ảnh trước"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setZoomImageIndex((prev) =>
+                      prev !== null ? (prev > 0 ? prev - 1 : imageList.length - 1) : 0,
+                    );
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 size-11 rounded-full bg-white/20 text-white hover:bg-white/40 flex items-center justify-center backdrop-blur transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="size-6" />
+                </button>
+              )}
+
+              {/* Next Button */}
+              {imageList.length > 1 && (
+                <button
+                  type="button"
+                  aria-label="Ảnh tiếp"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setZoomImageIndex((prev) =>
+                      prev !== null ? (prev < imageList.length - 1 ? prev + 1 : 0) : 0,
+                    );
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 size-11 rounded-full bg-white/20 text-white hover:bg-white/40 flex items-center justify-center backdrop-blur transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="size-6" />
+                </button>
+              )}
+
+              {/* Image Counter */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-xs font-bold uppercase tracking-wider bg-black/60 px-4 py-1.5 rounded-full backdrop-blur">
+                {zoomImageIndex + 1} / {imageList.length}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

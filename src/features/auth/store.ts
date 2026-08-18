@@ -9,6 +9,7 @@ interface AuthState {
   refreshToken: string | null;
   setUser: (user: User | null) => void;
   setSession: (session: { user: User; accessToken?: string | null; refreshToken?: string | null }) => void;
+  updateTokens: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
 }
 
@@ -24,6 +25,11 @@ export const useAuthStore = create<AuthState>()(
           user: session.user,
           accessToken: session.accessToken ?? null,
           refreshToken: session.refreshToken ?? null,
+        }),
+      updateTokens: (accessToken, refreshToken) =>
+        set({
+          accessToken,
+          refreshToken,
         }),
       logout: () => {
         useWishlistStore.getState().clear();
