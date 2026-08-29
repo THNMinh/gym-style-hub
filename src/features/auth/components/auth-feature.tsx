@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { login, register } from "@/entities/identity/services";
 import type { LoginResponse, RegisterResponse, User } from "@/entities/identity/types";
+import { parseUserFromToken } from "@/entities/identity/jwt";
 import { useAuthStore } from "../store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,18 +16,6 @@ export function AuthFeature() {
   const setSession = useAuthStore((s) => s.setSession);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [form, setForm] = useState({ email: "", password: "", fullName: "" });
-
-  function toCustomerUser(email: string, fullName: string | null): User {
-    return {
-      userId: email,
-      email,
-      fullName,
-      phone: null,
-      avatarUrl: null,
-      role: "Customer",
-      isEmailVerified: false,
-    };
-  }
 
   type AuthResult =
     | { mode: "login"; response: LoginResponse }
@@ -45,20 +34,36 @@ export function AuthFeature() {
     },
     onSuccess: (result) => {
       if (result.mode === "login") {
+        const user = parseUserFromToken(result.response.accessToken, form.email);
         setSession({
-          user: toCustomerUser(form.email, null),
+          user,
           accessToken: result.response.accessToken,
           refreshToken: result.response.refreshToken,
         });
+        toast.success("Đăng nhập thành công");
+        if (user.role === "Admin") {
+          navigate({ to: "/admin/dashboard" });
+        } else {
+          navigate({ to: "/account" });
+        }
       } else {
+        const user: User = {
+          userId: result.response.userId || result.response.email,
+          email: result.response.email,
+          fullName: result.response.fullName,
+          phone: null,
+          avatarUrl: null,
+          role: "Customer",
+          isEmailVerified: false,
+        };
         setSession({
-          user: toCustomerUser(result.response.email, result.response.fullName),
+          user,
           accessToken: null,
           refreshToken: null,
         });
+        toast.success("Tạo tài khoản thành công");
+        navigate({ to: "/account" });
       }
-      toast.success(mode === "login" ? "Đăng nhập thành công" : "Tạo tài khoản thành công");
-      navigate({ to: "/account" });
     },
     onError: (error: Error) => toast.error(error.message),
   });

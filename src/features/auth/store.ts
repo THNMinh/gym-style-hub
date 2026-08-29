@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@/entities/identity/types";
+import { parseUserFromToken } from "@/entities/identity/jwt";
 import { useWishlistStore } from "@/features/wishlist/store";
 
 interface AuthState {
@@ -15,22 +16,34 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       accessToken: null,
       refreshToken: null,
       setUser: (user) => set({ user }),
-      setSession: (session) =>
+      setSession: (session) => {
+        const token = session.accessToken ?? null;
+        let user = session.user;
+        if (token) {
+          user = parseUserFromToken(token, user?.email, user?.fullName);
+        }
         set({
-          user: session.user,
-          accessToken: session.accessToken ?? null,
+          user,
+          accessToken: token,
           refreshToken: session.refreshToken ?? null,
-        }),
-      updateTokens: (accessToken, refreshToken) =>
+        });
+      },
+      updateTokens: (accessToken, refreshToken) => {
+        const currentUser = get().user;
+        const updatedUser = accessToken
+          ? parseUserFromToken(accessToken, currentUser?.email, currentUser?.fullName)
+          : currentUser;
         set({
+          user: updatedUser,
           accessToken,
           refreshToken,
-        }),
+        });
+      },
       logout: () => {
         useWishlistStore.getState().clear();
         set({ user: null, accessToken: null, refreshToken: null });

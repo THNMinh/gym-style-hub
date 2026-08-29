@@ -1,0 +1,861 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import {
+  Plus,
+  Trash2,
+  Upload,
+  Tag,
+  PackageCheck,
+  Edit3,
+  Image as ImageIcon,
+} from "lucide-react";
+import {
+  getCategoriesApi,
+  createCategoryApi,
+  updateCategoryApi,
+  deleteCategoryApi,
+  getProductsAdminApi,
+  createProductAdminApi,
+  updateProductAdminApi,
+  deleteProductAdminApi,
+  getVariantsAdminApi,
+  createVariantAdminApi,
+  updateVariantAdminApi,
+  deleteVariantAdminApi,
+  uploadProductImagesApi,
+} from "@/entities/admin/services";
+import type { AdminProductDto, CategoryDto, VariantDto } from "@/entities/admin/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { formatPrice } from "@/shared/lib/format";
+
+import { AdminPagination } from "./admin-pagination";
+
+// Zod Schemas for Product, Variant & Category Forms
+const categorySchema = z.object({
+  name: z.string().min(2, "Tên danh mục ít nhất 2 ký tự"),
+  slug: z.string().min(2, "Slug ít nhất 2 ký tự"),
+  description: z.string().optional(),
+});
+
+const productSchema = z.object({
+  categoryId: z.string().min(1, "Vui lòng chọn danh mục"),
+  name: z.string().min(2, "Tên sản phẩm ít nhất 2 ký tự"),
+  slug: z.string().min(2, "Slug ít nhất 2 ký tự"),
+  description: z.string().optional(),
+  fitType: z.string().optional(),
+  gender: z.enum(["Men", "Women", "Unisex"]),
+});
+
+const updateProductSchema = productSchema.extend({
+  productId: z.string().min(1),
+  isActive: z.boolean(),
+});
+
+const variantSchema = z.object({
+  productId: z.string().min(1, "Vui lòng chọn sản phẩm"),
+  sku: z.string().min(3, "Mã SKU ít nhất 3 ký tự"),
+  colorName: z.string().min(1, "Nhập tên màu"),
+  colorHex: z.string().min(4, "Mã màu hex (VD: #000000)"),
+  size: z.string().min(1, "Vui lòng nhập size (S, M, L, XL...)"),
+  price: z.number().min(1000, "Giá sản phẩm phải lớn hơn 1.000đ"),
+  originalPrice: z.number().optional(),
+});
+
+type CategoryFormValues = z.infer<typeof categorySchema>;
+type ProductFormValues = z.infer<typeof productSchema>;
+type UpdateProductFormValues = z.infer<typeof updateProductSchema>;
+type VariantFormValues = z.infer<typeof variantSchema>;
+
+export function CatalogFeature() {
+  const queryClient = useQueryClient();
+
+  // Modals state
+  const [showCatModal, setShowCatModal] = useState(false);
+  const [editCategory, setEditCategory] = useState<CategoryDto | null>(null);
+
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [editProduct, setEditProduct] = useState<AdminProductDto | null>(null);
+
+  const [variantProduct, setVariantProduct] = useState<AdminProductDto | null>(null);
+  const [imageProduct, setImageProduct] = useState<AdminProductDto | null>(null);
+
+  // File upload state
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const [page, setPage] = useState(1);
+
+  // Data Queries
+  const categoriesQuery = useQuery({
+    queryKey: ["admin-categories"],
+    queryFn: getCategoriesApi,
+  });
+
+  const productsQuery = useQuery({
+    queryKey: ["admin-products", page],
+    queryFn: () => getProductsAdminApi(page, 15),
+  });
+
+  // Variants Query for selected product
+  const variantsQuery = useQuery({
+    queryKey: ["admin-variants", variantProduct?.productId],
+    queryFn: () => (variantProduct ? getVariantsAdminApi(variantProduct.productId) : Promise.resolve([])),
+    enabled: !!variantProduct,
+  });
+
+  // Category Mutations
+  const createCatMutation = useMutation({
+    mutationFn: createCategoryApi,
+    onSuccess: () => {
+      toast.success("Tạo danh mục mới thành công!");
+      setShowCatModal(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  });
+
+  const updateCatMutation = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: CategoryFormValues }) =>
+      updateCategoryApi(id, body),
+    onSuccess: () => {
+      toast.success("Cập nhật danh mục thành công!");
+      setEditCategory(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  });
+
+  const deleteCatMutation = useMutation({
+    mutationFn: deleteCategoryApi,
+    onSuccess: () => {
+      toast.success("Xóa danh mục thành công!");
+      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  });
+
+  // Product Mutations
+  const createProductMutation = useMutation({
+    mutationFn: createProductAdminApi,
+    onSuccess: () => {
+      toast.success("Tạo sản phẩm mới thành công!");
+      setShowProductModal(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: updateProductAdminApi,
+    onSuccess: () => {
+      toast.success("Cập nhật sản phẩm thành công!");
+      setEditProduct(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: deleteProductAdminApi,
+    onSuccess: () => {
+      toast.success("Xóa sản phẩm thành công!");
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  });
+
+  // Variant Mutations
+  const createVariantMutation = useMutation({
+    mutationFn: createVariantAdminApi,
+    onSuccess: () => {
+      toast.success("Thêm biến thể thành công!");
+      queryClient.invalidateQueries({ queryKey: ["admin-variants", variantProduct?.productId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  });
+
+  const deleteVariantMutation = useMutation({
+    mutationFn: deleteVariantAdminApi,
+    onSuccess: () => {
+      toast.success("Xóa biến thể thành công!");
+      queryClient.invalidateQueries({ queryKey: ["admin-variants", variantProduct?.productId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  });
+
+  // Form Hooks
+  const catForm = useForm<CategoryFormValues>({ resolver: zodResolver(categorySchema) });
+  const editCatForm = useForm<CategoryFormValues>({ resolver: zodResolver(categorySchema) });
+
+  const productForm = useForm<ProductFormValues>({
+    resolver: zodResolver(productSchema),
+    defaultValues: { gender: "Men" },
+  });
+
+  const editProductForm = useForm<UpdateProductFormValues>({
+    resolver: zodResolver(updateProductSchema),
+  });
+
+  const variantForm = useForm<VariantFormValues>({ resolver: zodResolver(variantSchema) });
+
+  const handleOpenEditProduct = (product: AdminProductDto) => {
+    setEditProduct(product);
+    editProductForm.reset({
+      productId: product.productId,
+      categoryId: product.categoryId,
+      name: product.name,
+      slug: product.slug,
+      description: product.description || "",
+      fitType: product.fitType || "",
+      gender: (product.gender as "Men" | "Women" | "Unisex") || "Men",
+      isActive: product.isActive,
+    });
+  };
+
+  const handleOpenEditCat = (cat: CategoryDto) => {
+    setEditCategory(cat);
+    editCatForm.reset({
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description || "",
+    });
+  };
+
+  const handleUploadImages = async () => {
+    if (!imageProduct || !selectedFiles || selectedFiles.length === 0) {
+      toast.error("Vui lòng chọn ít nhất 1 file ảnh");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const filesArray = Array.from(selectedFiles);
+      await uploadProductImagesApi(imageProduct.productId, filesArray);
+      toast.success("Upload hình ảnh sản phẩm thành công!");
+      setImageProduct(null);
+      setSelectedFiles(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Upload thất bại");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const categoryList: CategoryDto[] = Array.isArray(categoriesQuery.data)
+    ? categoriesQuery.data
+    : (categoriesQuery.data as any)?.items || [];
+
+  const productList: AdminProductDto[] = Array.isArray(productsQuery.data)
+    ? productsQuery.data
+    : (productsQuery.data as any)?.items || [];
+
+  return (
+    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+      {/* Title Bar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Quản lý Catalog & Sản phẩm</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Thêm / Sửa / Xóa Sản phẩm, Biến thể Màu/Size, Danh mục và Upload hình ảnh sản phẩm (`multipart/form-data`)
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowCatModal(true)} className="gap-1.5">
+            <Tag className="size-4" /> + Danh mục mới
+          </Button>
+          <Button size="sm" onClick={() => setShowProductModal(true)} className="gap-1.5 font-bold">
+            <Plus className="size-4" /> + Sản phẩm mới
+          </Button>
+        </div>
+      </div>
+
+      {/* Categories Summary */}
+      <Card className="border border-border/80 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <Tag className="size-4 text-primary" /> Danh mục sản phẩm ({categoryList.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {categoryList.map((cat) => (
+            <Badge key={cat.categoryId} variant="secondary" className="px-3 py-1 text-xs gap-2 items-center">
+              <span>{cat.name}</span>
+              <button
+                type="button"
+                onClick={() => handleOpenEditCat(cat)}
+                className="text-muted-foreground hover:text-primary transition-colors"
+                title="Chỉnh sửa danh mục"
+              >
+                <Edit3 className="size-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteCatMutation.mutate(cat.categoryId)}
+                className="text-muted-foreground hover:text-destructive transition-colors"
+                title="Xóa danh mục"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            </Badge>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Products Data Table */}
+      <Card className="border border-border/80 shadow-sm overflow-hidden">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <PackageCheck className="size-4 text-primary" /> Danh sách sản phẩm Catalog
+          </CardTitle>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-muted/50 border-b border-border text-xs uppercase font-bold text-muted-foreground">
+              <tr>
+                <th className="py-3.5 px-4">Ảnh</th>
+                <th className="py-3.5 px-4">Tên Sản phẩm / Slug</th>
+                <th className="py-3.5 px-4">Giới tính / Fit</th>
+                <th className="py-3.5 px-4">Trạng thái</th>
+                <th className="py-3.5 px-4 text-right">Thao tác Quản lý</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {productsQuery.isLoading ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-muted-foreground">
+                    Đang nạp danh sách sản phẩm...
+                  </td>
+                </tr>
+              ) : !productList || productList.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-muted-foreground">
+                    Chưa có sản phẩm nào trong catalog.
+                  </td>
+                </tr>
+              ) : (
+                productList.map((product) => (
+                  <tr key={product.productId} className="hover:bg-muted/30 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <div className="size-12 rounded bg-muted overflow-hidden border">
+                        {product.primaryImageUrl ? (
+                          <img src={product.primaryImageUrl} alt={product.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                            <ImageIcon className="size-5" />
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <p className="font-bold text-foreground">{product.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{product.slug}</p>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex gap-1">
+                        <Badge variant="outline" className="text-[10px]">
+                          {product.gender}
+                        </Badge>
+                        {product.fitType && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            {product.fitType}
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <Badge className={product.isActive ? "bg-emerald-500/15 text-emerald-600" : "bg-slate-500/15 text-slate-500"}>
+                        {product.isActive ? "Đang hiển thị" : "Ẩn"}
+                      </Badge>
+                    </td>
+                    <td className="py-3.5 px-4 text-right space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenEditProduct(product)}
+                        className="h-8 text-xs font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                      >
+                        <Edit3 className="size-3.5 mr-1" /> Sửa
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setVariantProduct(product);
+                          variantForm.reset({
+                            productId: product.productId,
+                            sku: `GK-${product.slug.toUpperCase().slice(0, 8)}-BLK-M`,
+                            colorName: "Black",
+                            colorHex: "#000000",
+                            size: "M",
+                            price: 299000,
+                          });
+                        }}
+                        className="h-8 text-xs font-semibold"
+                      >
+                        Biến thể (Variants)
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setImageProduct(product)}
+                        className="h-8 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                      >
+                        <Upload className="size-3.5 mr-1" /> Ảnh
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          if (confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${product.name}"?`)) {
+                            deleteProductMutation.mutate(product.productId);
+                          }
+                        }}
+                        className="h-8 text-xs text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Thanh Phân Trang (Pagination) */}
+        <AdminPagination
+          page={page}
+          pageSize={15}
+          totalCount={productsQuery.data?.totalCount || productList.length}
+          totalPages={productsQuery.data?.totalPages || 1}
+          onPageChange={setPage}
+        />
+      </Card>
+
+      {/* ------------------------------------------------------------- */}
+      {/* EDIT PRODUCT MODAL (PUT /api/products/{id})                   */}
+      {/* ------------------------------------------------------------- */}
+      <Dialog open={editProduct !== null} onOpenChange={(open) => !open && setEditProduct(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-bold flex items-center gap-2 text-amber-600">
+              <Edit3 className="size-5" /> Chỉnh sửa Sản phẩm: {editProduct?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin chi tiết và ẩn/hiện sản phẩm trên trang bán hàng.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={editProductForm.handleSubmit((values) => updateProductMutation.mutate(values))}
+            className="space-y-4 py-2"
+          >
+            <input type="hidden" {...editProductForm.register("productId")} />
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-prod-cat">Danh mục (*)</Label>
+              <select
+                id="edit-prod-cat"
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                {...editProductForm.register("categoryId")}
+              >
+                <option value="">-- Chọn danh mục --</option>
+                {categoryList.map((cat) => (
+                  <option key={cat.categoryId} value={cat.categoryId}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-prod-name">Tên sản phẩm (*)</Label>
+                <Input id="edit-prod-name" {...editProductForm.register("name")} />
+                {editProductForm.formState.errors.name && (
+                  <p className="text-xs text-destructive">{editProductForm.formState.errors.name.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-prod-slug">Slug (*)</Label>
+                <Input id="edit-prod-slug" {...editProductForm.register("slug")} />
+                {editProductForm.formState.errors.slug && (
+                  <p className="text-xs text-destructive">{editProductForm.formState.errors.slug.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-prod-gender">Giới tính (*)</Label>
+                <select
+                  id="edit-prod-gender"
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  {...editProductForm.register("gender")}
+                >
+                  <option value="Men">Nam (Men)</option>
+                  <option value="Women">Nữ (Women)</option>
+                  <option value="Unisex">Unisex</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-prod-fit">Fit Type (Slim / Regular / Oversized)</Label>
+                <Input id="edit-prod-fit" {...editProductForm.register("fitType")} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-prod-desc">Mô tả sản phẩm</Label>
+              <Textarea id="edit-prod-desc" rows={3} {...editProductForm.register("description")} />
+            </div>
+
+            <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+              <input
+                id="edit-prod-active"
+                type="checkbox"
+                className="size-4 rounded border-gray-300 accent-primary"
+                {...editProductForm.register("isActive")}
+              />
+              <Label htmlFor="edit-prod-active" className="cursor-pointer font-bold">
+                Bật hiển thị sản phẩm trên trang bán hàng (Client)
+              </Label>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditProduct(null)}>
+                Hủy
+              </Button>
+              <Button type="submit" disabled={updateProductMutation.isPending} className="font-bold">
+                {updateProductMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------------------------------------- */}
+      {/* MANAGE VARIANTS MODAL (GET/POST/DELETE /api/products/variants) */}
+      {/* ------------------------------------------------------------- */}
+      <Dialog open={variantProduct !== null} onOpenChange={(open) => !open && setVariantProduct(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-bold">Quản lý Biến thể (Variants) — {variantProduct?.name}</DialogTitle>
+            <DialogDescription>
+              Xem danh sách biến thể Màu sắc/Size hiện có hoặc thêm biến thể mới cho sản phẩm.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-2">
+            {/* Existing Variants Table */}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-muted px-4 py-2 text-xs font-bold text-muted-foreground border-b flex justify-between">
+                <span>Biến thể hiện có ({variantsQuery.data?.length || 0})</span>
+              </div>
+              <div className="max-h-48 overflow-y-auto divide-y">
+                {variantsQuery.isLoading ? (
+                  <div className="p-4 text-center text-xs text-muted-foreground">Đang tải biến thể...</div>
+                ) : !variantsQuery.data || variantsQuery.data.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-muted-foreground">Chưa có biến thể nào. Hãy thêm ở form dưới!</div>
+                ) : (
+                  variantsQuery.data.map((v) => (
+                    <div key={v.variantId} className="p-3 flex items-center justify-between text-xs hover:bg-muted/30">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-primary">{v.sku}</span>
+                          <span className="inline-block size-3 rounded-full border" style={{ backgroundColor: v.colorHex }} />
+                          <span className="font-semibold">{v.colorName}</span>
+                          <Badge variant="secondary" className="font-bold">{v.size}</Badge>
+                        </div>
+                        <p className="text-muted-foreground font-bold">{formatPrice(v.price)}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteVariantMutation.mutate(v.variantId)}
+                        className="h-7 text-destructive hover:bg-destructive/10 text-xs"
+                      >
+                        <Trash2 className="size-3.5" /> Xóa
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Add Variant Form */}
+            <form
+              onSubmit={variantForm.handleSubmit((values) =>
+                createVariantMutation.mutate({
+                  ...values,
+                  price: Number(values.price),
+                })
+              )}
+              className="space-y-3 p-4 border rounded-lg bg-muted/20"
+            >
+              <h4 className="text-xs font-bold uppercase text-foreground">Thêm biến thể mới</h4>
+              <div className="space-y-2">
+                <Label htmlFor="var-sku">Mã SKU (*)</Label>
+                <Input id="var-sku" className="h-9 text-xs" {...variantForm.register("sku")} />
+                {variantForm.formState.errors.sku && (
+                  <p className="text-xs text-destructive">{variantForm.formState.errors.sku.message}</p>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <Label htmlFor="var-color" className="text-xs">Tên màu (*)</Label>
+                  <Input id="var-color" className="h-9 text-xs" placeholder="Black" {...variantForm.register("colorName")} />
+                </div>
+                <div>
+                  <Label htmlFor="var-hex" className="text-xs">Mã Hex (*)</Label>
+                  <Input id="var-hex" className="h-9 text-xs" placeholder="#000000" {...variantForm.register("colorHex")} />
+                </div>
+                <div>
+                  <Label htmlFor="var-size" className="text-xs">Size (*)</Label>
+                  <Input id="var-size" className="h-9 text-xs" placeholder="M" {...variantForm.register("size")} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="var-price" className="text-xs">Giá niêm yết (đ) (*)</Label>
+                <Input
+                  id="var-price"
+                  type="number"
+                  className="h-9 text-xs"
+                  {...variantForm.register("price", { valueAsNumber: true })}
+                />
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setVariantProduct(null)}>
+                  Đóng
+                </Button>
+                <Button type="submit" size="sm" disabled={createVariantMutation.isPending} className="font-bold">
+                  Lưu biến thể mới
+                </Button>
+              </DialogFooter>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------------------------------------- */}
+      {/* CREATE CATEGORY MODAL (POST /api/categories)                  */}
+      {/* ------------------------------------------------------------- */}
+      <Dialog open={showCatModal} onOpenChange={setShowCatModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-bold">Tạo Danh mục Sản phẩm mới</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={catForm.handleSubmit((values) => createCatMutation.mutate(values))}
+            className="space-y-4 py-2"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="cat-name">Tên danh mục (*)</Label>
+              <Input id="cat-name" placeholder="Áo Tập Gym Nam" {...catForm.register("name")} />
+              {catForm.formState.errors.name && (
+                <p className="text-xs text-destructive">{catForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cat-slug">Slug (*)</Label>
+              <Input id="cat-slug" placeholder="ao-tap-gym-nam" {...catForm.register("slug")} />
+              {catForm.formState.errors.slug && (
+                <p className="text-xs text-destructive">{catForm.formState.errors.slug.message}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowCatModal(false)}>
+                Hủy
+              </Button>
+              <Button type="submit" disabled={createCatMutation.isPending} className="font-bold">
+                Tạo danh mục
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------------------------------------- */}
+      {/* EDIT CATEGORY MODAL (PUT /api/categories/{id})                */}
+      {/* ------------------------------------------------------------- */}
+      <Dialog open={editCategory !== null} onOpenChange={(open) => !open && setEditCategory(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-bold">Chỉnh sửa Danh mục: {editCategory?.name}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={editCatForm.handleSubmit((values) =>
+              updateCatMutation.mutate({ id: editCategory!.categoryId, body: values })
+            )}
+            className="space-y-4 py-2"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="edit-cat-name">Tên danh mục (*)</Label>
+              <Input id="edit-cat-name" {...editCatForm.register("name")} />
+              {editCatForm.formState.errors.name && (
+                <p className="text-xs text-destructive">{editCatForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-cat-slug">Slug (*)</Label>
+              <Input id="edit-cat-slug" {...editCatForm.register("slug")} />
+              {editCatForm.formState.errors.slug && (
+                <p className="text-xs text-destructive">{editCatForm.formState.errors.slug.message}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditCategory(null)}>
+                Hủy
+              </Button>
+              <Button type="submit" disabled={updateCatMutation.isPending} className="font-bold">
+                Lưu thay đổi
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------------------------------------- */}
+      {/* CREATE PRODUCT MODAL (POST /api/products)                     */}
+      {/* ------------------------------------------------------------- */}
+      <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-bold">Tạo Sản phẩm mới trong Catalog</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={productForm.handleSubmit((values) => createProductMutation.mutate(values))}
+            className="space-y-4 py-2"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="prod-cat">Danh mục (*)</Label>
+              <select
+                id="prod-cat"
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                {...productForm.register("categoryId")}
+              >
+                <option value="">-- Chọn danh mục --</option>
+                {categoryList.map((cat) => (
+                  <option key={cat.categoryId} value={cat.categoryId}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              {productForm.formState.errors.categoryId && (
+                <p className="text-xs text-destructive">{productForm.formState.errors.categoryId.message}</p>
+              )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="prod-name">Tên sản phẩm (*)</Label>
+                <Input id="prod-name" placeholder="GymKitten Essential Tee" {...productForm.register("name")} />
+                {productForm.formState.errors.name && (
+                  <p className="text-xs text-destructive">{productForm.formState.errors.name.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prod-slug">Slug (*)</Label>
+                <Input id="prod-slug" placeholder="gymkitten-essential-tee" {...productForm.register("slug")} />
+                {productForm.formState.errors.slug && (
+                  <p className="text-xs text-destructive">{productForm.formState.errors.slug.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="prod-gender">Giới tính (*)</Label>
+                <select
+                  id="prod-gender"
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  {...productForm.register("gender")}
+                >
+                  <option value="Men">Nam (Men)</option>
+                  <option value="Women">Nữ (Women)</option>
+                  <option value="Unisex">Unisex</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prod-fit">Fit Type (Slim / Regular)</Label>
+                <Input id="prod-fit" placeholder="Slim" {...productForm.register("fitType")} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="prod-desc">Mô tả sản phẩm</Label>
+              <Textarea id="prod-desc" rows={3} {...productForm.register("description")} />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowProductModal(false)}>
+                Hủy
+              </Button>
+              <Button type="submit" disabled={createProductMutation.isPending} className="font-bold">
+                Tạo sản phẩm
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------------------------------------- */}
+      {/* UPLOAD IMAGES MODAL (POST /api/products/{id}/images)          */}
+      {/* ------------------------------------------------------------- */}
+      <Dialog open={imageProduct !== null} onOpenChange={(open) => !open && setImageProduct(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-bold">Upload hình ảnh cho {imageProduct?.name}</DialogTitle>
+            <DialogDescription>
+              Upload file ảnh định dạng `multipart/form-data` lên hệ thống MinIO media storage.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            <div className="space-y-2">
+              <Label htmlFor="photo-upload">Chọn ảnh từ máy tính (*)</Label>
+              <Input
+                id="photo-upload"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => setSelectedFiles(e.target.files)}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setImageProduct(null)}>
+                Hủy
+              </Button>
+              <Button type="button" disabled={isUploading} onClick={handleUploadImages} className="font-bold">
+                {isUploading ? "Đang upload..." : "Upload ngay"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
