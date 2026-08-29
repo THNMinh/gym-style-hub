@@ -30,14 +30,14 @@ import { Textarea } from "@/components/ui/textarea";
 // Zod Schemas for Restock and Adjust Stock Modals
 const restockSchema = z.object({
   variantId: z.string().min(1, "Vui lòng chọn biến thể"),
-  quantityAdded: z.number({ invalid_type_error: "Vui lòng nhập số hợp lệ" }).min(1, "Số lượng thêm ít nhất là 1"),
-  note: z.string().optional(),
+  quantity: z.number({ invalid_type_error: "Vui lòng nhập số hợp lệ" }).min(1, "Số lượng thêm ít nhất là 1"),
+  referenceId: z.string().optional(),
 });
 
 const adjustSchema = z.object({
   variantId: z.string().min(1, "Vui lòng chọn biến thể"),
-  newQuantityOnHand: z.number({ invalid_type_error: "Vui lòng nhập số hợp lệ" }).min(0, "Số lượng không âm"),
-  reason: z.string().min(3, "Vui lòng nhập lý do điều chỉnh"),
+  newQuantity: z.number({ invalid_type_error: "Vui lòng nhập số hợp lệ" }).min(0, "Số lượng không âm"),
+  note: z.string().optional(),
 });
 
 type RestockFormValues = z.infer<typeof restockSchema>;
@@ -74,7 +74,7 @@ export function InventoryFeature() {
   const adjustMutation = useMutation({
     mutationFn: adjustInventoryApi,
     onSuccess: () => {
-      toast.success("Điều chỉnh số lượng tồn kho thành công!");
+      toast.success("Điều chỉnh kho thành công!");
       setAdjustItem(null);
       queryClient.invalidateQueries({ queryKey: ["admin-inventory"] });
     },
@@ -92,12 +92,12 @@ export function InventoryFeature() {
 
   const handleOpenRestock = (item: InventoryItem) => {
     setRestockItem(item);
-    restockForm.reset({ variantId: item.variantId, quantityAdded: 10, note: "" });
+    restockForm.reset({ variantId: item.variantId, quantity: 10, referenceId: "" });
   };
 
   const handleOpenAdjust = (item: InventoryItem) => {
     setAdjustItem(item);
-    adjustForm.reset({ variantId: item.variantId, newQuantityOnHand: item.quantityOnHand, reason: "" });
+    adjustForm.reset({ variantId: item.variantId, newQuantity: item.quantityOnHand, note: "" });
   };
 
   return (
@@ -111,17 +111,22 @@ export function InventoryFeature() {
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
-          <RefreshCw className="size-4" /> Làm mới dữ liệu
+          <RefreshCw className="size-4" /> Làm mới
         </Button>
       </div>
 
-      {/* Filter Bar */}
+      {/* Filter Cards */}
       <Card className="border border-border/80 shadow-sm">
-        <CardContent className="p-4 flex flex-col sm:flex-row gap-3">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Search className="size-4 text-muted-foreground" /> Bộ lọc tồn kho
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              placeholder="Lọc theo mã SKU (VD: GK-HOODIE)..."
+              placeholder="Lọc theo SKU (VD: GK-HOODIE)..."
               value={skuFilter}
               onChange={(e) => setSkuFilter(e.target.value)}
               className="pl-9 text-xs"
@@ -145,9 +150,9 @@ export function InventoryFeature() {
           <table className="w-full text-left text-sm">
             <thead className="bg-muted/50 border-b border-border text-xs uppercase font-bold text-muted-foreground">
               <tr>
-                <th className="py-3.5 px-4">Mã SKU</th>
-                <th className="py-3.5 px-4">Tên Sản phẩm</th>
-                <th className="py-3.5 px-4">Phân loại (Màu / Size)</th>
+                <th className="py-3.5 px-4">SKU</th>
+                <th className="py-3.5 px-4">Sản phẩm</th>
+                <th className="py-3.5 px-4">Biến thể</th>
                 <th className="py-3.5 px-4 text-center">Kho thực tế (OnHand)</th>
                 <th className="py-3.5 px-4 text-center">Đã giữ đơn (Reserved)</th>
                 <th className="py-3.5 px-4 text-center">Khả dụng (Available)</th>
@@ -189,9 +194,6 @@ export function InventoryFeature() {
                       {item.quantityReserved}
                     </td>
                     <td className="py-3.5 px-4 text-center font-extrabold text-emerald-600">
-                      {item.availableStock <= 10 && (
-                        <AlertTriangle className="inline-block size-3.5 mr-1 text-amber-500" />
-                      )}
                       {item.availableStock}
                     </td>
                     <td className="py-3.5 px-4 text-right space-x-2">
@@ -201,7 +203,7 @@ export function InventoryFeature() {
                         onClick={() => handleOpenRestock(item)}
                         className="h-8 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                       >
-                        <Plus className="size-3.5 mr-1" /> Nhập kho
+                        <Plus className="size-3.5 mr-1" /> Restock
                       </Button>
                       <Button
                         size="sm"
@@ -244,30 +246,30 @@ export function InventoryFeature() {
             onSubmit={restockForm.handleSubmit((values) =>
               restockMutation.mutate({
                 variantId: values.variantId,
-                quantityAdded: Number(values.quantityAdded),
-                note: values.note,
+                quantity: Number(values.quantity),
+                referenceId: values.referenceId,
               })
             )}
             className="space-y-4 py-2"
           >
             <div className="space-y-2">
-              <Label htmlFor="quantityAdded">Số lượng thêm mới (*)</Label>
+              <Label htmlFor="quantity">Số lượng thêm mới (*)</Label>
               <Input
-                id="quantityAdded"
+                id="quantity"
                 type="number"
                 min={1}
-                {...restockForm.register("quantityAdded", { valueAsNumber: true })}
+                {...restockForm.register("quantity", { valueAsNumber: true })}
               />
-              {restockForm.formState.errors.quantityAdded && (
+              {restockForm.formState.errors.quantity && (
                 <p className="text-xs text-destructive">
-                  {restockForm.formState.errors.quantityAdded.message}
+                  {restockForm.formState.errors.quantity.message}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="note">Ghi chú nhập kho (Tùy chọn)</Label>
-              <Textarea id="note" placeholder="VD: Nhập kho đợt hàng tháng 8" rows={3} {...restockForm.register("note")} />
+              <Label htmlFor="referenceId">Mã đợt nhập / Reference ID (Tùy chọn)</Label>
+              <Input id="referenceId" placeholder="VD: RESTOCK-BATCH-001" {...restockForm.register("referenceId")} />
             </div>
 
             <DialogFooter className="pt-2">
@@ -298,35 +300,30 @@ export function InventoryFeature() {
             onSubmit={adjustForm.handleSubmit((values) =>
               adjustMutation.mutate({
                 variantId: values.variantId,
-                newQuantityOnHand: Number(values.newQuantityOnHand),
-                reason: values.reason,
+                newQuantity: Number(values.newQuantity),
+                note: values.note,
               })
             )}
             className="space-y-4 py-2"
           >
             <div className="space-y-2">
-              <Label htmlFor="newQuantityOnHand">Số lượng thực tế mới (QuantityOnHand) (*)</Label>
+              <Label htmlFor="newQuantity">Số lượng thực tế mới (newQuantity) (*)</Label>
               <Input
-                id="newQuantityOnHand"
+                id="newQuantity"
                 type="number"
                 min={0}
-                {...adjustForm.register("newQuantityOnHand", { valueAsNumber: true })}
+                {...adjustForm.register("newQuantity", { valueAsNumber: true })}
               />
-              {adjustForm.formState.errors.newQuantityOnHand && (
+              {adjustForm.formState.errors.newQuantity && (
                 <p className="text-xs text-destructive">
-                  {adjustForm.formState.errors.newQuantityOnHand.message}
+                  {adjustForm.formState.errors.newQuantity.message}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reason">Lý do điều chỉnh (*)</Label>
-              <Textarea id="reason" placeholder="VD: Kiểm kê kho phát hiện hỏng 2 cái" rows={3} {...adjustForm.register("reason")} />
-              {adjustForm.formState.errors.reason && (
-                <p className="text-xs text-destructive">
-                  {adjustForm.formState.errors.reason.message}
-                </p>
-              )}
+              <Label htmlFor="adjust-note">Ghi chú điều chỉnh (*)</Label>
+              <Textarea id="adjust-note" placeholder="VD: Kiểm kê kho định kỳ" rows={3} {...adjustForm.register("note")} />
             </div>
 
             <DialogFooter className="pt-2">
@@ -334,7 +331,7 @@ export function InventoryFeature() {
                 Hủy
               </Button>
               <Button type="submit" disabled={adjustMutation.isPending} className="font-bold">
-                {adjustMutation.isPending ? "Đang xử lý..." : "Lưu điều chỉnh"}
+                {adjustMutation.isPending ? "Đang xử lý..." : "Lưu điều chỉnh kho"}
               </Button>
             </DialogFooter>
           </form>

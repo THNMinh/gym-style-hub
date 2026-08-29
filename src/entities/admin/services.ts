@@ -277,9 +277,10 @@ export async function createCategoryApi(body: CreateCategoryRequest): Promise<Ca
 }
 
 export async function updateCategoryApi(id: string, body: CreateCategoryRequest): Promise<CategoryDto> {
+  const { categoryId: _, ...payload } = body as { categoryId?: string } & CreateCategoryRequest;
   return request<CategoryDto>(`/api/categories/${id}`, {
     method: "PUT",
-    body: { categoryId: id, ...body },
+    body: payload,
   });
 }
 
@@ -353,9 +354,10 @@ export async function createProductAdminApi(body: CreateProductRequest): Promise
 }
 
 export async function updateProductAdminApi(body: UpdateProductRequest): Promise<AdminProductDto> {
-  return request<AdminProductDto>(`/api/products/${body.productId}`, {
+  const { productId, ...payload } = body;
+  return request<AdminProductDto>(`/api/products/${productId}`, {
     method: "PUT",
-    body,
+    body: payload,
   });
 }
 
@@ -377,9 +379,10 @@ export async function createVariantAdminApi(body: CreateVariantRequest): Promise
 }
 
 export async function updateVariantAdminApi(variantId: string, body: Partial<CreateVariantRequest>): Promise<VariantDto> {
+  const { variantId: _, productId: __, ...payload } = body as Record<string, unknown>;
   return request<VariantDto>(`/api/products/variants/${variantId}`, {
     method: "PUT",
-    body: { variantId, ...body },
+    body: payload,
   });
 }
 

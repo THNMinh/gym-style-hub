@@ -209,7 +209,7 @@ function filterProducts(query: ProductListQuery): Product[] {
 
 export async function getCategories(): Promise<Category[]> {
   if (useMockData) return mock(MOCK_CATEGORIES);
-  return request<Category[]>("/catalog/categories");
+  return request<Category[]>("/api/categories");
 }
 
 export async function getProducts(query: ProductListQuery = {}): Promise<PagedResult<Product>> {

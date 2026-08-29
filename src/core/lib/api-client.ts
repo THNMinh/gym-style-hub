@@ -11,11 +11,19 @@ export class ApiError extends Error {
   }
 }
 
+export interface ApiResult<T> {
+  isSuccess?: boolean;
+  data?: T;
+  error?: { code?: string; message?: string } | string | null;
+  timestamp?: string;
+}
+
 type RequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
 
 let refreshTokenPromise: Promise<{ accessToken: string; refreshToken: string }> | null = null;
 
 async function refreshTokens(): Promise<{ accessToken: string; refreshToken: string }> {
+  const currentAccessToken = useAuthStore.getState().accessToken;
   const currentRefreshToken = useAuthStore.getState().refreshToken;
 
   if (!currentRefreshToken) {
@@ -32,7 +40,10 @@ async function refreshTokens(): Promise<{ accessToken: string; refreshToken: str
       const response = await fetch(`${env.apiBaseUrl}/api/auth/refresh-token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: currentRefreshToken }),
+        body: JSON.stringify({
+          accessToken: currentAccessToken || "",
+          refreshToken: currentRefreshToken,
+        }),
       });
 
       if (!response.ok) {
@@ -40,9 +51,19 @@ async function refreshTokens(): Promise<{ accessToken: string; refreshToken: str
         throw new ApiError("Refresh token expired or invalid", response.status);
       }
 
-      const data = (await response.json()) as { accessToken: string; refreshToken: string };
-      useAuthStore.getState().updateTokens(data.accessToken, data.refreshToken);
-      return data;
+      const resJson = await response.json();
+      const tokenData = (resJson?.isSuccess !== undefined ? resJson.data : resJson) as {
+        accessToken: string;
+        refreshToken: string;
+      };
+
+      if (!tokenData?.accessToken) {
+        useAuthStore.getState().logout();
+        throw new ApiError("Invalid token response", 401);
+      }
+
+      useAuthStore.getState().updateTokens(tokenData.accessToken, tokenData.refreshToken);
+      return tokenData;
     } catch (err) {
       useAuthStore.getState().logout();
       throw err;
@@ -56,7 +77,7 @@ async function refreshTokens(): Promise<{ accessToken: string; refreshToken: str
 
 /**
  * Wrapper fetch dùng chung cho toàn bộ entity services.
- * Khi chưa có backend (VITE_API_BASE_URL rỗng), services sẽ gọi `mock()` thay vì `request()`.
+ * Tự động bóc tách Response Envelope `ApiResult<T>` từ Backend.
  */
 export async function request<T>(
   path: string,
@@ -82,14 +103,49 @@ export async function request<T>(
         await refreshTokens();
         return await request<T>(path, options, true);
       } catch {
-        // Refresh thất bại, ném ra lỗi bên dưới
+        // Refresh thất bại
       }
     }
-    throw new ApiError(await response.text().catch(() => response.statusText), response.status);
+
+    const errJson = await response.json().catch(() => null);
+    if (errJson && typeof errJson === "object") {
+      const errMsg =
+        errJson.error?.message ||
+        errJson.detail ||
+        errJson.title ||
+        (typeof errJson.error === "string" ? errJson.error : null);
+      if (errMsg) {
+        throw new ApiError(errMsg, response.status);
+      }
+    }
+
+    throw new ApiError(response.statusText || "Request failed", response.status);
   }
 
   if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+
+  const json = await response.json().catch(() => null);
+
+  if (json === null || json === undefined) {
+    return undefined as T;
+  }
+
+  // Tự động bóc tách Response Envelope (ApiResult<T>)
+  if (typeof json === "object" && json !== null && "isSuccess" in json) {
+    const envelope = json as ApiResult<T>;
+    if (envelope.isSuccess === false) {
+      const errMsg =
+        typeof envelope.error === "object" && envelope.error?.message
+          ? envelope.error.message
+          : typeof envelope.error === "string"
+          ? envelope.error
+          : "API Request Failed";
+      throw new ApiError(errMsg, response.status);
+    }
+    return envelope.data as T;
+  }
+
+  return json as T;
 }
 
 /** Trả về dữ liệu mock kèm độ trễ giả lập để UI có trạng thái loading thật. */

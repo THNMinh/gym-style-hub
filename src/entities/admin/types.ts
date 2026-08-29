@@ -26,14 +26,14 @@ export interface InventoryPaginatedResponse {
 
 export interface RestockRequest {
   variantId: string;
-  quantityAdded: number;
-  note?: string;
+  quantity: number;
+  referenceId?: string;
 }
 
 export interface AdjustRequest {
   variantId: string;
-  newQuantityOnHand: number;
-  reason?: string;
+  newQuantity: number;
+  note?: string;
 }
 
 export interface TransactionItem {
