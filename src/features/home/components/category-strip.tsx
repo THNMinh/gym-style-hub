@@ -1,10 +1,16 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getCategories } from "@/entities/catalog/services";
+import type { Category } from "@/entities/catalog/types";
 
 export function CategoryStrip() {
   const query = useQuery({ queryKey: ["categories"], queryFn: getCategories });
-  const categories = (query.data ?? []).filter((c) => c.parentCategoryId !== null);
+
+  const categoryList: Category[] = Array.isArray(query.data)
+    ? query.data
+    : (query.data as any)?.items || [];
+
+  const categories = categoryList.filter((c) => c.parentCategoryId !== null);
 
   return (
     <section className="mx-auto max-w-[1600px] px-4 pt-14 lg:px-8">

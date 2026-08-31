@@ -168,3 +168,12 @@ export interface CreateVariantRequest {
   originalPrice?: number | null;
   weightGrams?: number | null;
 }
+
+export interface ProductImageDto {
+  imageId: string;
+  productId: string;
+  variantId: string | null;
+  imageUrl: string;
+  displayOrder: number;
+  isPrimary: boolean;
+}

@@ -209,7 +209,12 @@ function filterProducts(query: ProductListQuery): Product[] {
 
 export async function getCategories(): Promise<Category[]> {
   if (useMockData) return mock(MOCK_CATEGORIES);
-  return request<Category[]>("/api/categories");
+  const res = await request<Category[] | { items: Category[] }>("/api/categories?pageSize=100");
+  if (Array.isArray(res)) return res;
+  if (res && Array.isArray((res as { items?: Category[] }).items)) {
+    return (res as { items: Category[] }).items;
+  }
+  return [];
 }
 
 export async function getProducts(query: ProductListQuery = {}): Promise<PagedResult<Product>> {
@@ -236,13 +241,15 @@ export async function getProducts(query: ProductListQuery = {}): Promise<PagedRe
   params.set("page", String(query.page ?? 1));
   params.set("pageSize", String(query.pageSize ?? 12));
 
-  const response = await request<BackendProductsResponse>(`/api/products?${params.toString()}`);
+  const response = await request<BackendProductsResponse | BackendProductItem[]>(`/api/products?${params.toString()}`);
+  const items = Array.isArray(response) ? response : response?.items || [];
+
   return {
-    items: response.items.map(mapListItemToProduct),
-    totalCount: response.totalCount,
-    page: response.page,
-    pageSize: response.pageSize,
-    totalPages: response.totalPages,
+    items: items.map(mapListItemToProduct),
+    totalCount: Array.isArray(response) ? items.length : response?.totalCount || items.length,
+    page: Array.isArray(response) ? 1 : response?.page || 1,
+    pageSize: Array.isArray(response) ? items.length : response?.pageSize || 12,
+    totalPages: Array.isArray(response) ? 1 : response?.totalPages || 1,
   };
 }
 

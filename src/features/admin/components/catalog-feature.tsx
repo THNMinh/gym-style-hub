@@ -12,6 +12,9 @@ import {
   PackageCheck,
   Edit3,
   Image as ImageIcon,
+  Palette,
+  Check,
+  Layers,
 } from "lucide-react";
 import {
   getCategoriesApi,
@@ -27,8 +30,10 @@ import {
   updateVariantAdminApi,
   deleteVariantAdminApi,
   uploadProductImagesApi,
+  getProductImagesApi,
+  deleteProductImageApi,
 } from "@/entities/admin/services";
-import type { AdminProductDto, CategoryDto, VariantDto } from "@/entities/admin/types";
+import type { AdminProductDto, CategoryDto, VariantDto, ProductImageDto } from "@/entities/admin/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +49,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { formatPrice } from "@/shared/lib/format";
-
 import { AdminPagination } from "./admin-pagination";
 
 // Zod Schemas for Product, Variant & Category Forms
@@ -83,6 +87,21 @@ type ProductFormValues = z.infer<typeof productSchema>;
 type UpdateProductFormValues = z.infer<typeof updateProductSchema>;
 type VariantFormValues = z.infer<typeof variantSchema>;
 
+// Bảng màu sắc gợi ý chuẩn GymKitten
+const PRESET_COLORS = [
+  { name: "Black", hex: "#000000" },
+  { name: "White", hex: "#FFFFFF" },
+  { name: "Charcoal", hex: "#262626" },
+  { name: "Light Grey", hex: "#D4D4D8" },
+  { name: "Navy", hex: "#0B192C" },
+  { name: "Royal Blue", hex: "#1E3A8A" },
+  { name: "Red", hex: "#DC2626" },
+  { name: "Pink", hex: "#F472B6" },
+  { name: "Purple", hex: "#7E22CE" },
+  { name: "Olive", hex: "#4D7C0F" },
+  { name: "Beige", hex: "#F5F5DC" },
+];
+
 export function CatalogFeature() {
   const queryClient = useQueryClient();
 
@@ -95,6 +114,7 @@ export function CatalogFeature() {
 
   const [variantProduct, setVariantProduct] = useState<AdminProductDto | null>(null);
   const [imageProduct, setImageProduct] = useState<AdminProductDto | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string>("");
 
   // File upload state
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
@@ -113,11 +133,36 @@ export function CatalogFeature() {
     queryFn: () => getProductsAdminApi(page, 15),
   });
 
-  // Variants Query for selected product
+  // Variants Query for selected product modal
   const variantsQuery = useQuery({
     queryKey: ["admin-variants", variantProduct?.productId],
     queryFn: () => (variantProduct ? getVariantsAdminApi(variantProduct.productId) : Promise.resolve([])),
     enabled: !!variantProduct,
+  });
+
+  // Query biến thể khi upload hình ảnh
+  const imageProductVariantsQuery = useQuery({
+    queryKey: ["admin-variants", imageProduct?.productId],
+    queryFn: () => (imageProduct ? getVariantsAdminApi(imageProduct.productId) : Promise.resolve([])),
+    enabled: !!imageProduct,
+  });
+
+  // Query hình ảnh hiện có của sản phẩm
+  const productImagesQuery = useQuery({
+    queryKey: ["admin-product-images", imageProduct?.productId],
+    queryFn: () => (imageProduct ? getProductImagesApi(imageProduct.productId) : Promise.resolve([])),
+    enabled: !!imageProduct,
+  });
+
+  // Image Delete Mutation
+  const deleteImageMutation = useMutation({
+    mutationFn: deleteProductImageApi,
+    onSuccess: () => {
+      toast.success("Xóa hình ảnh thành công!");
+      queryClient.invalidateQueries({ queryKey: ["admin-product-images", imageProduct?.productId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (err: Error) => toast.error(`Lỗi xóa ảnh: ${err.message}`),
   });
 
   // Category Mutations
@@ -215,7 +260,15 @@ export function CatalogFeature() {
     resolver: zodResolver(updateProductSchema),
   });
 
-  const variantForm = useForm<VariantFormValues>({ resolver: zodResolver(variantSchema) });
+  const variantForm = useForm<VariantFormValues>({
+    resolver: zodResolver(variantSchema),
+    defaultValues: {
+      colorName: "Black",
+      colorHex: "#000000",
+      size: "M",
+      price: 299000,
+    },
+  });
 
   const handleOpenEditProduct = (product: AdminProductDto) => {
     setEditProduct(product);
@@ -249,10 +302,14 @@ export function CatalogFeature() {
     setIsUploading(true);
     try {
       const filesArray = Array.from(selectedFiles);
-      await uploadProductImagesApi(imageProduct.productId, filesArray);
+      await uploadProductImagesApi(
+        imageProduct.productId,
+        filesArray,
+        selectedVariantId ? selectedVariantId : undefined
+      );
       toast.success("Upload hình ảnh sản phẩm thành công!");
-      setImageProduct(null);
       setSelectedFiles(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-product-images", imageProduct.productId] });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Upload thất bại");
@@ -276,7 +333,7 @@ export function CatalogFeature() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Quản lý Catalog & Sản phẩm</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Thêm / Sửa / Xóa Sản phẩm, Biến thể Màu/Size, Danh mục và Upload hình ảnh sản phẩm (`multipart/form-data`)
+            Thêm / Sửa / Xóa Sản phẩm, Biến thể Màu/Size, Danh mục và Upload/Xóa hình ảnh (`multipart/form-data`)
           </p>
         </div>
         <div className="flex gap-2">
@@ -417,10 +474,13 @@ export function CatalogFeature() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setImageProduct(product)}
+                        onClick={() => {
+                          setImageProduct(product);
+                          setSelectedVariantId("");
+                        }}
                         className="h-8 text-xs font-semibold text-blue-600 hover:text-blue-700"
                       >
-                        <Upload className="size-3.5 mr-1" /> Ảnh
+                        <Upload className="size-3.5 mr-1" /> Quản lý Ảnh
                       </Button>
                       <Button
                         size="sm"
@@ -557,7 +617,7 @@ export function CatalogFeature() {
       {/* MANAGE VARIANTS MODAL (GET/POST/DELETE /api/products/variants) */}
       {/* ------------------------------------------------------------- */}
       <Dialog open={variantProduct !== null} onOpenChange={(open) => !open && setVariantProduct(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-bold">Quản lý Biến thể (Variants) — {variantProduct?.name}</DialogTitle>
             <DialogDescription>
@@ -582,7 +642,7 @@ export function CatalogFeature() {
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-bold text-primary">{v.sku}</span>
-                          <span className="inline-block size-3 rounded-full border" style={{ backgroundColor: v.colorHex }} />
+                          <span className="inline-block size-3.5 rounded-full border shadow-sm" style={{ backgroundColor: v.colorHex }} />
                           <span className="font-semibold">{v.colorName}</span>
                           <Badge variant="secondary" className="font-bold">{v.size}</Badge>
                         </div>
@@ -594,7 +654,7 @@ export function CatalogFeature() {
                         onClick={() => deleteVariantMutation.mutate(v.variantId)}
                         className="h-7 text-destructive hover:bg-destructive/10 text-xs"
                       >
-                        <Trash2 className="size-3.5" /> Xóa
+                        <Trash2 className="size-3.5 mr-1" /> Xóa
                       </Button>
                     </div>
                   ))
@@ -610,29 +670,82 @@ export function CatalogFeature() {
                   price: Number(values.price),
                 })
               )}
-              className="space-y-3 p-4 border rounded-lg bg-muted/20"
+              className="space-y-4 p-4 border rounded-lg bg-muted/20"
             >
-              <h4 className="text-xs font-bold uppercase text-foreground">Thêm biến thể mới</h4>
+              <h4 className="text-xs font-bold uppercase text-foreground flex items-center gap-1.5">
+                <Plus className="size-4 text-primary" /> Thêm biến thể mới
+              </h4>
+
               <div className="space-y-2">
                 <Label htmlFor="var-sku">Mã SKU (*)</Label>
-                <Input id="var-sku" className="h-9 text-xs" {...variantForm.register("sku")} />
+                <Input id="var-sku" className="h-9 text-xs font-mono" {...variantForm.register("sku")} />
                 {variantForm.formState.errors.sku && (
                   <p className="text-xs text-destructive">{variantForm.formState.errors.sku.message}</p>
                 )}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div>
-                  <Label htmlFor="var-color" className="text-xs">Tên màu (*)</Label>
-                  <Input id="var-color" className="h-9 text-xs" placeholder="Black" {...variantForm.register("colorName")} />
+              {/* Color Name, Color Picker Input & Hex */}
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <Label htmlFor="var-color" className="text-xs">Tên màu (*)</Label>
+                    <Input id="var-color" className="h-9 text-xs" placeholder="Black" {...variantForm.register("colorName")} />
+                  </div>
+                  <div>
+                    <Label htmlFor="var-hex" className="text-xs">Bảng chọn màu (Picker) (*)</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={variantForm.watch("colorHex") || "#000000"}
+                        onChange={(e) => variantForm.setValue("colorHex", e.target.value.toUpperCase())}
+                        className="size-9 p-0.5 rounded cursor-pointer border bg-background"
+                      />
+                      <Input
+                        id="var-hex"
+                        className="h-9 text-xs font-mono"
+                        placeholder="#000000"
+                        {...variantForm.register("colorHex")}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="var-size" className="text-xs">Size (*)</Label>
+                    <Input id="var-size" className="h-9 text-xs" placeholder="M" {...variantForm.register("size")} />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="var-hex" className="text-xs">Mã Hex (*)</Label>
-                  <Input id="var-hex" className="h-9 text-xs" placeholder="#000000" {...variantForm.register("colorHex")} />
-                </div>
-                <div>
-                  <Label htmlFor="var-size" className="text-xs">Size (*)</Label>
-                  <Input id="var-size" className="h-9 text-xs" placeholder="M" {...variantForm.register("size")} />
+
+                {/* Preset GymKitten Color Palette */}
+                <div className="space-y-1.5 pt-1">
+                  <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                    <Palette className="size-3 text-primary" /> Màu gợi ý GymKitten (Bấm chọn nhanh):
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRESET_COLORS.map((preset) => {
+                      const selected = variantForm.watch("colorHex")?.toUpperCase() === preset.hex.toUpperCase();
+                      return (
+                        <button
+                          key={preset.hex}
+                          type="button"
+                          onClick={() => {
+                            variantForm.setValue("colorName", preset.name);
+                            variantForm.setValue("colorHex", preset.hex);
+                          }}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                            selected
+                              ? "border-primary bg-primary/10 ring-1 ring-primary font-bold"
+                              : "border-border bg-background hover:bg-muted"
+                          }`}
+                        >
+                          <span
+                            className="size-3 rounded-full border shadow-sm"
+                            style={{ backgroundColor: preset.hex }}
+                          />
+                          <span>{preset.name}</span>
+                          {selected && <Check className="size-3 text-primary" />}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -822,37 +935,121 @@ export function CatalogFeature() {
       </Dialog>
 
       {/* ------------------------------------------------------------- */}
-      {/* UPLOAD IMAGES MODAL (POST /api/products/{id}/images)          */}
+      {/* UPLOAD & MANAGE IMAGES MODAL (GET/POST/DELETE /api/products/images) */}
       {/* ------------------------------------------------------------- */}
       <Dialog open={imageProduct !== null} onOpenChange={(open) => !open && setImageProduct(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-bold">Upload hình ảnh cho {imageProduct?.name}</DialogTitle>
+            <DialogTitle className="font-bold flex items-center gap-2">
+              <ImageIcon className="size-5 text-blue-600" /> Quản lý Hình ảnh — {imageProduct?.name}
+            </DialogTitle>
             <DialogDescription>
-              Upload file ảnh định dạng `multipart/form-data` lên hệ thống MinIO media storage.
+              Xem danh sách ảnh hiện có, xóa ảnh bị lỗi hoặc Upload thêm ảnh cho Sản phẩm gốc hoặc Biến thể cụ thể.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-3">
-            <div className="space-y-2">
-              <Label htmlFor="photo-upload">Chọn ảnh từ máy tính (*)</Label>
-              <Input
-                id="photo-upload"
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => setSelectedFiles(e.target.files)}
-              />
+          <div className="space-y-6 py-2">
+            {/* Gallery ảnh hiện có */}
+            <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
+              <h4 className="text-xs font-bold uppercase text-foreground flex items-center justify-between">
+                <span>Hình ảnh hiện có ({productImagesQuery.data?.length || 0})</span>
+                {productImagesQuery.isFetching && <span className="text-[10px] text-muted-foreground font-normal">Đang tải...</span>}
+              </h4>
+
+              {productImagesQuery.isLoading ? (
+                <div className="py-8 text-center text-xs text-muted-foreground">Đang tải bộ sưu tập ảnh...</div>
+              ) : !productImagesQuery.data || productImagesQuery.data.length === 0 ? (
+                <div className="py-8 text-center text-xs text-muted-foreground border border-dashed rounded-lg bg-background">
+                  Chưa có hình ảnh nào cho sản phẩm này. Hãy chọn ảnh và upload ở bên dưới!
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {productImagesQuery.data.map((img) => {
+                    const matchedVariant = imageProductVariantsQuery.data?.find((v) => v.variantId === img.variantId);
+                    return (
+                      <div key={img.imageId} className="group relative rounded-lg border bg-background overflow-hidden shadow-sm">
+                        <div className="aspect-square w-full overflow-hidden bg-muted">
+                          <img src={img.imageUrl} alt="Product image" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                        </div>
+                        <div className="p-2 space-y-1">
+                          <div className="flex items-center justify-between text-[10px]">
+                            {img.variantId && matchedVariant ? (
+                              <Badge variant="secondary" className="font-bold text-[9px] truncate max-w-[100px]">
+                                {matchedVariant.colorName} - {matchedVariant.size}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[9px]">Gốc (Product)</Badge>
+                            )}
+                            {img.isPrimary && <Badge className="bg-amber-500 text-[9px] py-0 px-1">Chính</Badge>}
+                          </div>
+                        </div>
+
+                        {/* Delete Image Overlay Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm("Bạn có chắc chắn muốn xóa hình ảnh này?")) {
+                              deleteImageMutation.mutate(img.imageId);
+                            }
+                          }}
+                          className="absolute top-1.5 right-1.5 p-1.5 rounded-full bg-destructive/90 text-white shadow-md hover:bg-destructive transition-colors opacity-90 sm:opacity-0 sm:group-hover:opacity-100"
+                          title="Xóa hình ảnh này"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setImageProduct(null)}>
-                Hủy
-              </Button>
-              <Button type="button" disabled={isUploading} onClick={handleUploadImages} className="font-bold">
-                {isUploading ? "Đang upload..." : "Upload ngay"}
-              </Button>
-            </DialogFooter>
+            {/* Upload Form */}
+            <div className="space-y-4 border rounded-lg p-4 bg-background">
+              <h4 className="text-xs font-bold uppercase text-foreground flex items-center gap-1.5">
+                <Upload className="size-4 text-blue-600" /> Upload ảnh mới
+              </h4>
+
+              {/* Target Variant Selector */}
+              <div className="space-y-2">
+                <Label htmlFor="target-variant" className="text-xs">Áp dụng hình ảnh cho (*)</Label>
+                <select
+                  id="target-variant"
+                  value={selectedVariantId}
+                  onChange={(e) => setSelectedVariantId(e.target.value)}
+                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-xs"
+                >
+                  <option value="">-- Sản phẩm gốc (Dùng chung cho tất cả biến thể) --</option>
+                  {imageProductVariantsQuery.data?.map((v) => (
+                    <option key={v.variantId} value={v.variantId}>
+                      Biến thể: {v.colorName} - {v.size} (SKU: {v.sku})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* File Input */}
+              <div className="space-y-2">
+                <Label htmlFor="photo-upload" className="text-xs">Chọn file ảnh từ máy tính (*)</Label>
+                <Input
+                  id="photo-upload"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => setSelectedFiles(e.target.files)}
+                  className="h-9 text-xs cursor-pointer"
+                />
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setImageProduct(null)}>
+                  Đóng
+                </Button>
+                <Button type="button" size="sm" disabled={isUploading} onClick={handleUploadImages} className="font-bold gap-1.5">
+                  <Upload className="size-3.5" /> {isUploading ? "Đang upload..." : "Upload ngay"}
+                </Button>
+              </DialogFooter>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

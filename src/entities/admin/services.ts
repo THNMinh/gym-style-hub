@@ -17,6 +17,7 @@ import type {
   VariantDto,
   CreateVariantRequest,
   AdminOrderItem,
+  ProductImageDto,
 } from "./types";
 
 // ==========================================
@@ -419,4 +420,23 @@ export async function uploadProductImagesApi(
   }
 
   return response.json().catch(() => ({ success: true }));
+}
+
+export async function getProductImagesApi(productId: string): Promise<ProductImageDto[]> {
+  try {
+    const res = await request<ProductImageDto[] | { items: ProductImageDto[] }>(`/api/products/${productId}/images`);
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray((res as { items?: ProductImageDto[] }).items)) {
+      return (res as { items: ProductImageDto[] }).items;
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteProductImageApi(imageId: string): Promise<void> {
+  return request<void>(`/api/products/images/${imageId}`, {
+    method: "DELETE",
+  });
 }
