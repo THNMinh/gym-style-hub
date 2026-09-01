@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { User } from "@/entities/identity/types";
 import { parseUserFromToken } from "@/entities/identity/jwt";
 import { useWishlistStore } from "@/features/wishlist/store";
+import { useCartStore } from "@/features/cart/store";
 
 interface AuthState {
   user: User | null;
@@ -46,6 +47,7 @@ export const useAuthStore = create<AuthState>()(
       },
       logout: () => {
         useWishlistStore.getState().clear();
+        useCartStore.getState().clear();
         set({ user: null, accessToken: null, refreshToken: null });
       },
     }),

@@ -15,23 +15,86 @@ export interface CartLine {
 
 export type OrderStatus =
   | "Pending"
+  | "Processing"
+  | "Shipped"
+  | "Delivered"
+  | "Cancelled"
   | "Confirmed"
   | "Packing"
   | "Shipping"
-  | "Delivered"
-  | "Cancelled";
+  | string;
 
-export type PaymentMethod = "COD" | "Card" | "Momo" | "VNPay";
-export type PaymentStatus = "Unpaid" | "Paid" | "Refunded";
+export type PaymentMethod = "COD" | "Card" | "Momo" | "VNPay" | string;
+export type PaymentStatus = "Unpaid" | "Paid" | "Refunded" | string;
+
+export interface MyOrderItemDto {
+  orderId: string;
+  orderCode: string;
+  totalAmount: number;
+  currentStatus: OrderStatus;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  createdAt: string;
+  totalItems: number;
+  items?: OrderDetailItemDto[];
+}
+
+export interface MyOrdersPagedResponse {
+  items: MyOrderItemDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface OrderDetailItemDto {
+  orderItemId: string;
+  variantId: string;
+  sku: string;
+  productName: string;
+  unitPrice: number;
+  quantity: number;
+  totalPrice: number;
+  imageUrl?: string | null;
+}
+
+export interface OrderDetailDto {
+  orderId: string;
+  orderCode: string;
+  userId: string;
+  shippingAddress: string;
+  subtotal: number;
+  shippingFee: number;
+  discountAmount: number;
+  totalAmount: number;
+  currentStatus: OrderStatus;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  customerNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: OrderDetailItemDto[];
+}
+
+export interface OrderTrackingHistoryDto {
+  trackingId: string;
+  orderId: string;
+  status: OrderStatus;
+  title: string;
+  description: string | null;
+  location: string | null;
+  timestamp: string;
+  createdAt?: string;
+}
 
 export interface OrderItem {
   orderItemId: string;
   variantId: string;
   sku: string;
   productName: string;
-  colorName: string;
-  size: string;
-  imageUrl: string;
+  colorName?: string;
+  size?: string;
+  imageUrl?: string;
   unitPrice: number;
   quantity: number;
   totalPrice: number;
@@ -74,18 +137,21 @@ export interface Coupon {
   isActive: boolean;
 }
 
-export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+export const ORDER_STATUS_LABEL: Record<string, string> = {
   Pending: "Chờ xác nhận",
+  Processing: "Đang đóng gói",
+  Shipped: "Đang giao hàng",
+  Delivered: "Đã giao hàng",
+  Cancelled: "Đã hủy đơn",
   Confirmed: "Đã xác nhận",
-  Packing: "Đang đóng gói",
-  Shipping: "Đang giao",
-  Delivered: "Đã giao",
-  Cancelled: "Đã huỷ",
+  Packing: "Đang chuẩn bị",
+  Shipping: "Đang giao hàng",
 };
 
-export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
-  COD: "Thanh toán khi nhận hàng",
+export const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  COD: "Thanh toán khi nhận hàng (COD)",
   Card: "Thẻ tín dụng / ghi nợ",
   Momo: "Ví MoMo",
   VNPay: "VNPay QR",
+  VNPAY: "VNPay QR",
 };

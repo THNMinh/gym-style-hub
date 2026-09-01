@@ -29,13 +29,47 @@ export async function shipOrderApi(orderId: string): Promise<ShipOrderResponse> 
   });
 }
 
-export async function getAdminOrdersApi(
-  page = 1,
-  pageSize = 15,
-): Promise<OrderPaginatedResponse> {
+export interface UpdateAdminOrderStatusPayload {
+  status: string;
+  title: string;
+  description?: string;
+  location?: string;
+}
+
+export async function updateOrderStatusAdminApi(
+  orderId: string,
+  payload: UpdateAdminOrderStatusPayload
+): Promise<{ orderId: string; status: string; message: string }> {
+  return request<{ orderId: string; status: string; message: string }>(
+    `/api/admin/orders/${orderId}/status`,
+    {
+      method: "PUT",
+      body: payload,
+    }
+  );
+}
+
+export async function getAdminOrdersApi(params?: {
+  orderCode?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<OrderPaginatedResponse> {
+  const page = params?.page ?? 1;
+  const pageSize = params?.pageSize ?? 15;
+  const query = new URLSearchParams();
+  if (params?.orderCode) query.set("orderCode", params.orderCode);
+  if (params?.status) query.set("status", params.status);
+  if (params?.startDate) query.set("startDate", params.startDate);
+  if (params?.endDate) query.set("endDate", params.endDate);
+  query.set("page", String(page));
+  query.set("pageSize", String(pageSize));
+
   try {
     const res = await request<OrderPaginatedResponse | AdminOrderItem[] | { items: AdminOrderItem[]; totalCount?: number; totalPages?: number }>(
-      `/api/admin/orders?page=${page}&pageSize=${pageSize}`,
+      `/api/admin/orders?${query.toString()}`,
     );
 
     if (Array.isArray(res)) {
