@@ -11,9 +11,10 @@ import { useAuthStore } from "@/features/auth/store";
 import { useHydrated } from "@/shared/hooks/use-hydrated";
 import { AuthFeature } from "@/features/auth/components/auth-feature";
 import { OrderTrackingModal } from "@/features/order/components/order-tracking-modal";
+import { WriteOrderReviewModal } from "@/features/order/components/write-order-review-modal";
 import { AdminPagination } from "@/features/admin/components/admin-pagination";
 import { toast } from "sonner";
-import { Package, Truck, Clock, XCircle, CheckCircle2, Eye, Ban, ShoppingBag } from "lucide-react";
+import { Package, Truck, Clock, XCircle, CheckCircle2, Eye, ShoppingBag, Star } from "lucide-react";
 
 export function AccountFeature() {
   const queryClient = useQueryClient();
@@ -25,8 +26,15 @@ export function AccountFeature() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [page, setPage] = useState(1);
 
-  // Tracking Modal State
+  // Tracking & Review Modal State
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
+  const [writeReviewTarget, setWriteReviewTarget] = useState<{
+    orderId: string;
+    orderCode?: string;
+    productId: string;
+    productName: string;
+    imageUrl?: string | null;
+  } | null>(null);
 
   // Fetch My Orders API
   const myOrdersQuery = useQuery({
@@ -156,7 +164,10 @@ export function AccountFeature() {
           ) : (
             <div className="space-y-6">
               {orderList.map((order) => {
-                const isPending = (order.currentStatus || "").toLowerCase() === "pending";
+                const s = (order.currentStatus || "").toLowerCase();
+                const isPending = s === "pending";
+                const isDelivered = s === "delivered" || s === "completed";
+                const firstItem = order.items && order.items.length > 0 ? order.items[0] : null;
 
                 return (
                   <article
@@ -241,6 +252,25 @@ export function AccountFeature() {
                           <span className="text-xl font-black text-primary">{formatPrice(order.totalAmount)}</span>
                         </div>
 
+                        {/* Red/Orange Shopee Review Button when Order Delivered */}
+                        {isDelivered && firstItem && (
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              setWriteReviewTarget({
+                                orderId: order.orderId,
+                                orderCode: order.orderCode,
+                                productId: firstItem.productId || firstItem.variantId,
+                                productName: firstItem.productName,
+                                imageUrl: firstItem.imageUrl,
+                              })
+                            }
+                            className="h-10 px-5 text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white shadow-md rounded-md gap-1.5 transition-all"
+                          >
+                            <Star className="size-4 fill-current" /> Đánh Giá
+                          </Button>
+                        )}
+
                         {isPending && (
                           <Button
                             size="sm"
@@ -259,10 +289,11 @@ export function AccountFeature() {
 
                         <Button
                           size="sm"
+                          variant="outline"
                           onClick={() => setTrackingOrderId(order.orderId)}
-                          className="h-10 px-5 text-xs font-bold bg-primary text-primary-foreground hover:opacity-95 shadow-md rounded-md gap-2"
+                          className="h-10 px-5 text-xs font-bold border-border text-foreground hover:bg-muted shadow-sm rounded-md gap-2"
                         >
-                          <Eye className="size-4" /> Xem Chi Tiết & Timeline
+                          <Eye className="size-4 text-primary" /> Xem Chi Tiết & Timeline
                         </Button>
                       </div>
                     </div>
@@ -315,12 +346,25 @@ export function AccountFeature() {
         </TabsContent>
       </Tabs>
 
-      {/* Shopee Style Tracking Modal */}
+      {/* Shopee Style Order Tracking Modal */}
       <OrderTrackingModal
         orderId={trackingOrderId}
         open={trackingOrderId !== null}
         onClose={() => setTrackingOrderId(null)}
       />
+
+      {/* Write Review Modal triggered from Delivered Order Card */}
+      {writeReviewTarget && (
+        <WriteOrderReviewModal
+          open={writeReviewTarget !== null}
+          onClose={() => setWriteReviewTarget(null)}
+          orderId={writeReviewTarget.orderId}
+          orderCode={writeReviewTarget.orderCode}
+          productId={writeReviewTarget.productId}
+          productName={writeReviewTarget.productName}
+          imageUrl={writeReviewTarget.imageUrl}
+        />
+      )}
     </div>
   );
 }

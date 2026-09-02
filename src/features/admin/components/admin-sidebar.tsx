@@ -8,6 +8,7 @@ import {
   Store,
   LogOut,
   Dumbbell,
+  Star,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ const navigation = [
   { name: "Quản lý Tồn kho", href: "/admin/inventory", icon: Package },
   { name: "Báo cáo Tài chính", href: "/admin/finance", icon: DollarSign },
   { name: "Quản lý Catalog & Sản phẩm", href: "/admin/catalog", icon: Layers },
+  { name: "Kiểm duyệt Đánh giá", href: "/admin/reviews", icon: Star },
 ];
 
 export function AdminSidebar() {

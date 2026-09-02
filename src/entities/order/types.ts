@@ -50,6 +50,7 @@ export interface MyOrdersPagedResponse {
 export interface OrderDetailItemDto {
   orderItemId: string;
   variantId: string;
+  productId?: string;
   sku: string;
   productName: string;
   unitPrice: number;
