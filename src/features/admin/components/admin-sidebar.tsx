@@ -9,6 +9,7 @@ import {
   LogOut,
   Dumbbell,
   Star,
+  Ticket,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ const navigation = [
   { name: "Báo cáo Tài chính", href: "/admin/finance", icon: DollarSign },
   { name: "Quản lý Catalog & Sản phẩm", href: "/admin/catalog", icon: Layers },
   { name: "Kiểm duyệt Đánh giá", href: "/admin/reviews", icon: Star },
+  { name: "Quản lý Mã Giảm Giá", href: "/admin/coupons", icon: Ticket },
 ];
 
 export function AdminSidebar() {

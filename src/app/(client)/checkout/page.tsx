@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { CartSummary } from "@/components/checkout/cart-summary";
 import { useCartStore } from "@/features/cart/store";
@@ -7,10 +8,12 @@ import { useHydrated } from "@/shared/hooks/use-hydrated";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
+import type { ApplyCouponResponse } from "@/entities/coupon/types";
 
 export default function CheckoutPage() {
   const hydrated = useHydrated();
   const lines = useCartStore((s) => s.lines);
+  const [appliedCoupon, setAppliedCoupon] = useState<ApplyCouponResponse | null>(null);
 
   if (!hydrated) {
     return <div className="min-h-[60vh] flex items-center justify-center" />;
@@ -53,10 +56,10 @@ export default function CheckoutPage() {
       {/* Two Column Layout: Form on Left, Cart Summary on Right */}
       <div className="grid gap-10 lg:grid-cols-[1fr_420px]">
         <div>
-          <CheckoutForm />
+          <CheckoutForm couponCode={appliedCoupon?.code} />
         </div>
         <div className="lg:sticky lg:top-28 h-fit">
-          <CartSummary />
+          <CartSummary onCouponApplied={(res) => setAppliedCoupon(res)} />
         </div>
       </div>
     </div>

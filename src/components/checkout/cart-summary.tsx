@@ -1,41 +1,80 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { formatPrice } from "@/shared/lib/format";
 import { cartSubTotal, useCartStore } from "@/features/cart/store";
+import { getActiveCouponsApi, applyCouponApi } from "@/entities/coupon/services";
+import type { ApplyCouponResponse, CouponItemDto } from "@/entities/coupon/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingBag, Truck, ShieldCheck, Tag } from "lucide-react";
+import { ShoppingBag, Truck, ShieldCheck, Tag, Check, Ticket, Loader2 } from "lucide-react";
 import { env } from "@/core/config/env";
 import { toast } from "sonner";
+import { ApiError } from "@/core/lib/api-client";
 
-export function CartSummary() {
+interface CartSummaryProps {
+  onCouponApplied?: (couponResponse: ApplyCouponResponse | null) => void;
+}
+
+export function CartSummary({ onCouponApplied }: CartSummaryProps) {
   const lines = useCartStore((s) => s.lines);
-  const [couponCode, setCouponCode] = useState("");
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<ApplyCouponResponse | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
 
   const subTotal = cartSubTotal(lines);
   const shippingFee = subTotal >= env.freeShippingThreshold || subTotal === 0 ? 0 : env.shippingFee;
-  const discountAmount = (subTotal * discountPercent) / 100;
+  const discountAmount = appliedCoupon ? appliedCoupon.discountAmount : 0;
   const grandTotal = Math.max(0, subTotal + shippingFee - discountAmount);
 
-  const handleApplyCoupon = () => {
-    const code = couponCode.trim().toUpperCase();
-    if (!code) return;
+  // Active Vouchers Query
+  const activeCouponsQuery = useQuery({
+    queryKey: ["active-coupons"],
+    queryFn: getActiveCouponsApi,
+  });
 
-    if (code === "GYMKITTEN10" || code === "GYM10") {
-      setDiscountPercent(10);
-      setAppliedCoupon(code);
-      toast.success("Áp dụng mã giảm giá 10% thành công!");
-    } else if (code === "WELCOME20") {
-      setDiscountPercent(20);
-      setAppliedCoupon(code);
-      toast.success("Áp dụng mã giảm giá 20% thành công!");
-    } else {
-      toast.error("Mã giảm giá không hợp lệ hoặc đã hết hạn");
+  const activeCoupons = activeCouponsQuery.data || [];
+
+  const handleApplyCouponCode = async (codeToApply?: string) => {
+    const code = (codeToApply || couponCodeInput).trim().toUpperCase();
+    if (!code) {
+      toast.error("Vui lòng nhập mã giảm giá");
+      return;
     }
+    if (subTotal === 0) {
+      toast.error("Giỏ hàng của bạn đang trống");
+      return;
+    }
+
+    setIsApplying(true);
+    try {
+      const res = await applyCouponApi(code, subTotal);
+      setAppliedCoupon(res);
+      setCouponCodeInput(res.code);
+      if (onCouponApplied) onCouponApplied(res);
+      toast.success(res.message || `Đã áp dụng mã ${res.code} giảm ${formatPrice(res.discountAmount)}!`);
+    } catch (err: any) {
+      setAppliedCoupon(null);
+      if (onCouponApplied) onCouponApplied(null);
+
+      const errorMessage =
+        err instanceof ApiError
+          ? err.message
+          : err?.response?.data?.detail || err?.message || "Áp dụng mã giảm giá thất bại";
+
+      toast.error(errorMessage);
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCodeInput("");
+    if (onCouponApplied) onCouponApplied(null);
+    toast.info("Đã gỡ mã giảm giá");
   };
 
   return (
@@ -82,25 +121,63 @@ export function CartSummary() {
         <Separator />
 
         {/* Coupon Code Input */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Tag className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Mã giảm giá (GYM10)"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
+                placeholder="Nhập mã giảm giá (VD: GYMKITTEN10)"
+                value={couponCodeInput}
+                onChange={(e) => setCouponCodeInput(e.target.value)}
                 className="pl-9 text-xs uppercase"
+                disabled={isApplying || !!appliedCoupon}
               />
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={handleApplyCoupon}>
-              Áp dụng
-            </Button>
+            {appliedCoupon ? (
+              <Button type="button" variant="destructive" size="sm" onClick={handleRemoveCoupon}>
+                Gỡ mã
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleApplyCouponCode()}
+                disabled={isApplying}
+              >
+                {isApplying ? <Loader2 className="size-4 animate-spin" /> : "Áp dụng"}
+              </Button>
+            )}
           </div>
+
           {appliedCoupon && (
-            <p className="text-xs text-emerald-600 font-medium">
-              ✓ Đã áp dụng mã <span className="font-bold">{appliedCoupon}</span> (-{discountPercent}%)
-            </p>
+            <div className="p-2.5 rounded-lg border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/30 text-xs flex items-center justify-between text-emerald-700 dark:text-emerald-300">
+              <span className="flex items-center gap-1 font-semibold">
+                <Check className="size-4 text-emerald-600" /> Mã <strong className="font-mono">{appliedCoupon.code}</strong>: Giảm {formatPrice(appliedCoupon.discountAmount)}
+              </span>
+            </div>
+          )}
+
+          {/* Active Available Vouchers Quick Selector */}
+          {activeCoupons.length > 0 && !appliedCoupon && (
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1">
+                <Ticket className="size-3.5 text-primary" /> Mã giảm giá đang có sẵn cho bạn:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {activeCoupons.map((c: CouponItemDto) => (
+                  <button
+                    key={c.couponId}
+                    type="button"
+                    onClick={() => handleApplyCouponCode(c.code)}
+                    className="text-[11px] font-mono font-bold px-2 py-1 border border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary rounded transition-colors"
+                    title={`Đơn tối thiểu ${formatPrice(c.minOrderValue)}`}
+                  >
+                    {c.code}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
@@ -127,8 +204,8 @@ export function CartSummary() {
           </div>
 
           {discountAmount > 0 && (
-            <div className="flex justify-between text-emerald-600 font-medium">
-              <span>Giảm giá ({discountPercent}%)</span>
+            <div className="flex justify-between text-emerald-600 font-bold">
+              <span>Giảm giá khuyến mãi</span>
               <span>-{formatPrice(discountAmount)}</span>
             </div>
           )}

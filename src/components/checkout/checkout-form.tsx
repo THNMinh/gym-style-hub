@@ -21,7 +21,11 @@ import {
   type CheckoutResponseData,
 } from "@/lib/validations/checkout";
 
-export function CheckoutForm() {
+interface CheckoutFormProps {
+  couponCode?: string | null;
+}
+
+export function CheckoutForm({ couponCode }: CheckoutFormProps) {
   const navigate = useNavigate();
   const lines = useCartStore((s) => s.lines);
   const clearCart = useCartStore((s) => s.clear);
@@ -83,6 +87,7 @@ export function CheckoutForm() {
       shippingAddress: fullAddress,
       paymentMethod: values.paymentMethod,
       customerNote: values.customerNote?.trim() || null,
+      couponCode: couponCode?.trim() || null,
     };
 
     try {

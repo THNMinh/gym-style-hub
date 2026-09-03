@@ -16,6 +16,7 @@ import { Route as CartRouteImport } from './routes/cart'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as WishlistRouteImport } from './routes/wishlist'
 import { Route as AdminCatalogRouteImport } from './routes/admin/catalog'
+import { Route as AdminCouponsRouteImport } from './routes/admin/coupons'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminFinanceRouteImport } from './routes/admin/finance'
 import { Route as AdminInventoryRouteImport } from './routes/admin/inventory'
@@ -58,6 +59,11 @@ const WishlistRoute = WishlistRouteImport.update({
 const AdminCatalogRoute = AdminCatalogRouteImport.update({
   id: '/admin/catalog',
   path: '/admin/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCouponsRoute = AdminCouponsRouteImport.update({
+  id: '/admin/coupons',
+  path: '/admin/coupons',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRoute
   '/wishlist': typeof WishlistRoute
   '/admin/catalog': typeof AdminCatalogRoute
+  '/admin/coupons': typeof AdminCouponsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/inventory': typeof AdminInventoryRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/wishlist': typeof WishlistRoute
   '/admin/catalog': typeof AdminCatalogRoute
+  '/admin/coupons': typeof AdminCouponsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/inventory': typeof AdminInventoryRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRoute
   '/wishlist': typeof WishlistRoute
   '/admin/catalog': typeof AdminCatalogRoute
+  '/admin/coupons': typeof AdminCouponsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/inventory': typeof AdminInventoryRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/wishlist'
     | '/admin/catalog'
+    | '/admin/coupons'
     | '/admin/dashboard'
     | '/admin/finance'
     | '/admin/inventory'
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/wishlist'
     | '/admin/catalog'
+    | '/admin/coupons'
     | '/admin/dashboard'
     | '/admin/finance'
     | '/admin/inventory'
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/wishlist'
     | '/admin/catalog'
+    | '/admin/coupons'
     | '/admin/dashboard'
     | '/admin/finance'
     | '/admin/inventory'
@@ -215,6 +227,7 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRoute
   WishlistRoute: typeof WishlistRoute
   AdminCatalogRoute: typeof AdminCatalogRoute
+  AdminCouponsRoute: typeof AdminCouponsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
   AdminInventoryRoute: typeof AdminInventoryRoute
@@ -274,6 +287,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/catalog'
       fullPath: '/admin/catalog'
       preLoaderRoute: typeof AdminCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/coupons': {
+      id: '/admin/coupons'
+      path: '/admin/coupons'
+      fullPath: '/admin/coupons'
+      preLoaderRoute: typeof AdminCouponsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/dashboard': {
@@ -343,6 +363,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRoute,
   WishlistRoute: WishlistRoute,
   AdminCatalogRoute: AdminCatalogRoute,
+  AdminCouponsRoute: AdminCouponsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminFinanceRoute: AdminFinanceRoute,
   AdminInventoryRoute: AdminInventoryRoute,
