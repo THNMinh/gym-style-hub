@@ -1,20 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
-import { CreditCard, Truck, Wallet, ShieldAlert, Loader2 } from "lucide-react";
+import { CreditCard, Truck, Wallet, ShieldAlert, Loader2, MapPin, Check, Plus } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { env } from "@/core/config/env";
 import { request, ApiError } from "@/core/lib/api-client";
 import { useCartStore } from "@/features/cart/store";
 import { useAuthStore } from "@/features/auth/store";
+import { getMyAddressesApi } from "@/entities/identity/services";
+import type { UserAddress } from "@/entities/identity/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import {
   checkoutSchema,
   type CheckoutFormValues,
@@ -32,6 +36,14 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | "custom">("custom");
+
+  // Fetch User Addresses
+  const { data: savedAddresses = [] } = useQuery({
+    queryKey: ["user-addresses"],
+    queryFn: getMyAddressesApi,
+    enabled: !!user,
+  });
 
   const {
     register,
@@ -55,6 +67,27 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
 
   const selectedPaymentMethod = watch("paymentMethod");
 
+  // Auto select default address when addresses load
+  useEffect(() => {
+    if (savedAddresses.length > 0) {
+      const defaultAddr = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
+      if (defaultAddr) {
+        handleSelectSavedAddress(defaultAddr);
+      }
+    }
+  }, [savedAddresses]);
+
+  const handleSelectSavedAddress = (addr: UserAddress) => {
+    setSelectedAddressId(addr.addressId);
+    setValue("receiverName", addr.receiverName);
+    setValue("phoneNumber", addr.phoneNumber);
+    setValue("shippingAddress", addr.addressLine1);
+    setValue("ward", addr.ward || "");
+    setValue("district", addr.district || "");
+    setValue("city", addr.city || "");
+    toast.info(`Đã áp dụng địa chỉ giao hàng của ${addr.receiverName}`);
+  };
+
   const onSubmit = async (values: CheckoutFormValues) => {
     if (!lines.length) {
       toast.error("Giỏ hàng của bạn đang trống!");
@@ -69,7 +102,7 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
 
     setIsSubmitting(true);
 
-    // Build full shipping address string
+    // Build full shipping address string matching userAddresses standard format
     const addressParts = [
       values.shippingAddress.trim(),
       values.ward?.trim(),
@@ -91,7 +124,7 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
     };
 
     try {
-      // Gọi API Endpoint POST /api/checkout với request() tự động đính kèm Bearer token & refresh token
+      // Gọi API Endpoint POST /api/checkout với request() tự động đính kèm Bearer token
       let data: CheckoutResponseData;
 
       try {
@@ -100,7 +133,6 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
           body: payload,
         });
       } catch (reqErr) {
-        // Fallback với axios đính kèm accessToken
         if (reqErr instanceof ApiError && reqErr.status === 401) {
           toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
           navigate({ to: "/auth", search: { redirect: "/checkout" } });
@@ -165,10 +197,64 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
             <Truck className="size-5 text-primary" /> Thông tin giao hàng
           </CardTitle>
           <CardDescription>
-            Nhập chính xác người nhận và địa chỉ giao hàng để đảm bảo đơn hàng đến nhanh nhất.
+            Chọn địa chỉ từ sổ địa chỉ của bạn hoặc nhập địa chỉ giao hàng mới.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+
+        <CardContent className="space-y-6">
+          {/* Saved Addresses 1-Click Selector */}
+          {user && savedAddresses.length > 0 && (
+            <div className="space-y-3 p-4 bg-muted/40 rounded-xl border border-border/60">
+              <span className="text-xs font-bold text-foreground flex items-center gap-1.5 uppercase tracking-wider">
+                <MapPin className="size-4 text-primary" /> Sổ địa chỉ của bạn (1-Click chọn nhanh):
+              </span>
+
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                {savedAddresses.map((addr) => {
+                  const isSelected = selectedAddressId === addr.addressId;
+                  return (
+                    <div
+                      key={addr.addressId}
+                      onClick={() => handleSelectSavedAddress(addr)}
+                      className={`p-3 rounded-lg border text-xs cursor-pointer transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border-border bg-background hover:bg-accent/40"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between font-bold text-foreground">
+                        <span className="truncate">{addr.receiverName} ({addr.phoneNumber})</span>
+                        {addr.isDefault && (
+                          <Badge variant="secondary" className="text-[9px] px-1 py-0">
+                            Mặc định
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground line-clamp-2">
+                        {addr.addressLine1}, {addr.ward}, {addr.district}, {addr.city}
+                      </p>
+                    </div>
+                  );
+                })}
+
+                <div
+                  onClick={() => {
+                    setSelectedAddressId("custom");
+                    setValue("shippingAddress", "");
+                  }}
+                  className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-center gap-1 font-semibold ${
+                    selectedAddressId === "custom"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary text-primary"
+                      : "border-dashed border-border bg-background hover:bg-accent/40 text-muted-foreground"
+                  }`}
+                >
+                  <Plus className="size-3.5" /> Tự nhập địa chỉ mới
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Input Fields Form */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="receiverName">Tên người nhận *</Label>

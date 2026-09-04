@@ -15,6 +15,7 @@ import {
   Palette,
   Check,
   Layers,
+  Ruler,
 } from "lucide-react";
 import {
   getCategoriesApi,
@@ -33,6 +34,12 @@ import {
   getProductImagesApi,
   deleteProductImageApi,
 } from "@/entities/admin/services";
+import {
+  getProductSizeGuideApi,
+  createAdminSizeGuideApi,
+  updateAdminSizeGuideApi,
+} from "@/entities/sizeguide/services";
+import type { SizeGuideItem, CreateSizeGuidePayload } from "@/entities/sizeguide/types";
 import type { AdminProductDto, CategoryDto, VariantDto, ProductImageDto } from "@/entities/admin/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +126,93 @@ export function CatalogFeature() {
   // File upload state
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Size Guide Modal State
+  const [sizeGuideProduct, setSizeGuideProduct] = useState<AdminProductDto | null>(null);
+  const [editingGuideId, setEditingGuideId] = useState<string | null>(null);
+  const [guideSize, setGuideSize] = useState("M");
+  
+  // Numeric Min/Max range states
+  const [chestMin, setChestMin] = useState<number | "">("");
+  const [chestMax, setChestMax] = useState<number | "">("");
+  const [waistMin, setWaistMin] = useState<number | "">("");
+  const [waistMax, setWaistMax] = useState<number | "">("");
+  const [hipsMin, setHipsMin] = useState<number | "">("");
+  const [hipsMax, setHipsMax] = useState<number | "">("");
+  const [heightMin, setHeightMin] = useState<number | "">("");
+  const [heightMax, setHeightMax] = useState<number | "">("");
+
+  const resetSizeGuideForm = () => {
+    setEditingGuideId(null);
+    setGuideSize("M");
+    setChestMin("");
+    setChestMax("");
+    setWaistMin("");
+    setWaistMax("");
+    setHipsMin("");
+    setHipsMax("");
+    setHeightMin("");
+    setHeightMax("");
+  };
+
+  const sizeGuideQuery = useQuery({
+    queryKey: ["admin-size-guide", sizeGuideProduct?.productId],
+    queryFn: () => (sizeGuideProduct ? getProductSizeGuideApi(sizeGuideProduct.productId) : Promise.resolve({ productId: "", items: [] })),
+    enabled: !!sizeGuideProduct,
+  });
+
+  const saveSizeGuideMutation = useMutation({
+    mutationFn: async () => {
+      if (!sizeGuideProduct) return;
+
+      // Validation: Check Min <= Max for each non-empty range
+      const validateRange = (label: string, min: number | "", max: number | ""): string | null => {
+        if (min !== "" && max !== "" && Number(min) > Number(max)) {
+          return `${label}: Giá trị từ (${min}) phải nhỏ hơn hoặc bằng giá trị đến (${max})!`;
+        }
+        return null;
+      };
+
+      const chestErr = validateRange("Vòng Ngực", chestMin, chestMax);
+      if (chestErr) throw new Error(chestErr);
+
+      const waistErr = validateRange("Vòng Eo", waistMin, waistMax);
+      if (waistErr) throw new Error(waistErr);
+
+      const hipsErr = validateRange("Vòng Hông", hipsMin, hipsMax);
+      if (hipsErr) throw new Error(hipsErr);
+
+      const heightErr = validateRange("Chiều Cao", heightMin, heightMax);
+      if (heightErr) throw new Error(heightErr);
+
+      const formatRange = (min: number | "", max: number | ""): string => {
+        if (min !== "" && max !== "") return `${min}-${max}`;
+        if (min !== "") return `${min}`;
+        if (max !== "") return `${max}`;
+        return "";
+      };
+
+      const payload: CreateSizeGuidePayload = {
+        size: guideSize.trim(),
+        chestCm: formatRange(chestMin, chestMax),
+        waistCm: formatRange(waistMin, waistMax),
+        hipsCm: formatRange(hipsMin, hipsMax),
+        heightRangeCm: formatRange(heightMin, heightMax),
+      };
+
+      if (editingGuideId) {
+        return updateAdminSizeGuideApi(editingGuideId, payload);
+      }
+      return createAdminSizeGuideApi(sizeGuideProduct.productId, payload);
+    },
+    onSuccess: () => {
+      toast.success(editingGuideId ? "Đã cập nhật dòng size!" : "Đã thêm dòng size mới!");
+      queryClient.invalidateQueries({ queryKey: ["admin-size-guide", sizeGuideProduct?.productId] });
+      queryClient.invalidateQueries({ queryKey: ["size-guide", sizeGuideProduct?.productId] });
+      resetSizeGuideForm();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const [page, setPage] = useState(1);
 
@@ -481,6 +575,17 @@ export function CatalogFeature() {
                         className="h-8 text-xs font-semibold text-blue-600 hover:text-blue-700"
                       >
                         <Upload className="size-3.5 mr-1" /> Quản lý Ảnh
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSizeGuideProduct(product);
+                          resetSizeGuideForm();
+                        }}
+                        className="h-8 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                      >
+                        <Ruler className="size-3.5 mr-1" /> Bảng Size
                       </Button>
                       <Button
                         size="sm"
@@ -1050,6 +1155,263 @@ export function CatalogFeature() {
                 </Button>
               </DialogFooter>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Dialog Quản Lý Bảng Size Guide (Admin APIs 1.3 & 1.4) */}
+      <Dialog open={!!sizeGuideProduct} onOpenChange={(open) => !open && setSizeGuideProduct(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-extrabold text-lg flex items-center gap-2 text-primary">
+              <Ruler className="size-5" /> Quản Lý Bảng Size — {sizeGuideProduct?.name}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Thiết lập thông số số đo chuẩn (Vòng ngực, Vòng eo, Vòng hông, Chiều cao) cho từng kích cỡ của sản phẩm này.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-2">
+            {/* Existing Size Guide Rows Table */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                Danh sách số đo kích cỡ hiện tại ({sizeGuideQuery.data?.items?.length || 0})
+              </h4>
+              {sizeGuideQuery.isLoading ? (
+                <div className="py-6 text-center text-xs text-muted-foreground">Đang nạp bảng size...</div>
+              ) : !sizeGuideQuery.data?.items || sizeGuideQuery.data.items.length === 0 ? (
+                <div className="p-6 text-center border border-dashed rounded-xl text-xs text-muted-foreground">
+                  Sản phẩm này chưa được tạo bảng size. Hãy nhập thông số bên dưới để thiết lập bảng size mới.
+                </div>
+              ) : (
+                <div className="border rounded-xl overflow-hidden shadow-sm">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-muted/60 font-bold border-b text-muted-foreground">
+                      <tr>
+                        <th className="py-2.5 px-3">Size</th>
+                        <th className="py-2.5 px-3">Vòng Ngực (cm)</th>
+                        <th className="py-2.5 px-3">Vòng Eo (cm)</th>
+                        <th className="py-2.5 px-3">Vòng Hông (cm)</th>
+                        <th className="py-2.5 px-3">Chiều Cao (cm)</th>
+                        <th className="py-2.5 px-3 text-right">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {sizeGuideQuery.data.items.map((item) => (
+                        <tr key={item.guideId} className="hover:bg-muted/30">
+                          <td className="py-2.5 px-3 font-black text-primary">{item.size}</td>
+                          <td className="py-2.5 px-3">{item.chestCm || "N/A"}</td>
+                          <td className="py-2.5 px-3">{item.waistCm || "N/A"}</td>
+                          <td className="py-2.5 px-3">{item.hipsCm || "N/A"}</td>
+                          <td className="py-2.5 px-3">{item.heightRangeCm || "N/A"}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingGuideId(item.guideId);
+                                setGuideSize(item.size);
+
+                                const parseStrRange = (str?: string) => {
+                                  if (!str) return { min: "" as const, max: "" as const };
+                                  const parts = str.split("-").map((p) => p.trim());
+                                  const min = parts[0] && !isNaN(Number(parts[0])) ? Number(parts[0]) : "";
+                                  const max = parts[1] && !isNaN(Number(parts[1])) ? Number(parts[1]) : "";
+                                  return { min, max };
+                                };
+
+                                const c = parseStrRange(item.chestCm);
+                                setChestMin(c.min);
+                                setChestMax(c.max);
+
+                                const w = parseStrRange(item.waistCm);
+                                setWaistMin(w.min);
+                                setWaistMax(w.max);
+
+                                const h = parseStrRange(item.hipsCm);
+                                setHipsMin(h.min);
+                                setHipsMax(h.max);
+
+                                const ht = parseStrRange(item.heightRangeCm);
+                                setHeightMin(ht.min);
+                                setHeightMax(ht.max);
+                              }}
+                              className="h-7 text-[11px] font-bold text-amber-600 px-2"
+                            >
+                              Sửa
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Form Add / Edit Size Guide Row */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveSizeGuideMutation.mutate();
+              }}
+              className="space-y-4 border rounded-2xl p-5 bg-muted/20 shadow-sm"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                  <Ruler className="size-4 text-primary" />
+                  {editingGuideId ? `Chỉnh sửa dòng quy đổi (Size ${guideSize})` : "Thêm dòng quy đổi size mới"}
+                </h4>
+                {editingGuideId && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetSizeGuideForm}
+                    className="h-7 text-xs text-muted-foreground hover:text-foreground font-semibold"
+                  >
+                    Hủy sửa (Tạo dòng mới)
+                  </Button>
+                )}
+              </div>
+
+              {/* Row 1: Size Selector */}
+              <div className="max-w-xs space-y-1.5">
+                <Label htmlFor="gs-size" className="text-xs font-bold text-foreground">Kích cỡ (Size) (*)</Label>
+                <select
+                  id="gs-size"
+                  value={guideSize}
+                  onChange={(e) => setGuideSize(e.target.value)}
+                  className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs font-black text-primary shadow-xs"
+                >
+                  {["XS", "S", "M", "L", "XL", "XXL", "3XL", "FreeSize"].map((s) => (
+                    <option key={s} value={s}>
+                      Size {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Row 2: 2x2 Grid for Measurement Ranges */}
+              <div className="grid gap-4 sm:grid-cols-2 pt-1">
+                {/* Vòng Ngực Range */}
+                <div className="p-3.5 bg-background border border-border/80 rounded-xl space-y-2 shadow-2xs">
+                  <Label className="text-xs font-bold text-foreground">Vòng Ngực (cm)</Label>
+                  <div className="grid grid-cols-2 gap-2.5 items-center">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-medium block mb-1">Từ (Min)</span>
+                      <Input
+                        type="number"
+                        placeholder="Ví dụ: 88"
+                        value={chestMin}
+                        onChange={(e) => setChestMin(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="h-8 text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-medium block mb-1">Đến (Max)</span>
+                      <Input
+                        type="number"
+                        placeholder="Ví dụ: 94"
+                        value={chestMax}
+                        onChange={(e) => setChestMax(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="h-8 text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vòng Eo Range */}
+                <div className="p-3.5 bg-background border border-border/80 rounded-xl space-y-2 shadow-2xs">
+                  <Label className="text-xs font-bold text-foreground">Vòng Eo (cm)</Label>
+                  <div className="grid grid-cols-2 gap-2.5 items-center">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-medium block mb-1">Từ (Min)</span>
+                      <Input
+                        type="number"
+                        placeholder="Ví dụ: 72"
+                        value={waistMin}
+                        onChange={(e) => setWaistMin(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="h-8 text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-medium block mb-1">Đến (Max)</span>
+                      <Input
+                        type="number"
+                        placeholder="Ví dụ: 78"
+                        value={waistMax}
+                        onChange={(e) => setWaistMax(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="h-8 text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vòng Hông Range */}
+                <div className="p-3.5 bg-background border border-border/80 rounded-xl space-y-2 shadow-2xs">
+                  <Label className="text-xs font-bold text-foreground">Vòng Hông (cm)</Label>
+                  <div className="grid grid-cols-2 gap-2.5 items-center">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-medium block mb-1">Từ (Min)</span>
+                      <Input
+                        type="number"
+                        placeholder="Ví dụ: 96"
+                        value={hipsMin}
+                        onChange={(e) => setHipsMin(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="h-8 text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-medium block mb-1">Đến (Max)</span>
+                      <Input
+                        type="number"
+                        placeholder="Ví dụ: 102"
+                        value={hipsMax}
+                        onChange={(e) => setHipsMax(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="h-8 text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chiều Cao Range */}
+                <div className="p-3.5 bg-background border border-border/80 rounded-xl space-y-2 shadow-2xs">
+                  <Label className="text-xs font-bold text-foreground">Chiều cao (cm)</Label>
+                  <div className="grid grid-cols-2 gap-2.5 items-center">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-medium block mb-1">Từ (Min)</span>
+                      <Input
+                        type="number"
+                        placeholder="Ví dụ: 168"
+                        value={heightMin}
+                        onChange={(e) => setHeightMin(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="h-8 text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-medium block mb-1">Đến (Max)</span>
+                      <Input
+                        type="number"
+                        placeholder="Ví dụ: 175"
+                        value={heightMax}
+                        onChange={(e) => setHeightMax(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="h-8 text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-3 border-t border-border/60">
+                <Button type="button" variant="outline" size="sm" onClick={() => setSizeGuideProduct(null)}>
+                  Đóng
+                </Button>
+                <Button type="submit" size="sm" disabled={saveSizeGuideMutation.isPending} className="font-bold gap-1.5 shadow-sm">
+                  {saveSizeGuideMutation.isPending ? "Đang lưu..." : editingGuideId ? "Cập Nhật Dòng Size" : "Lưu Dòng Size Mới"}
+                </Button>
+              </DialogFooter>
+            </form>
           </div>
         </DialogContent>
       </Dialog>

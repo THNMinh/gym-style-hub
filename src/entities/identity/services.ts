@@ -1,15 +1,23 @@
 import { mock, request } from "@/core/lib/api-client";
 import { useMockData } from "@/core/config/env";
-import type { Credentials, LoginResponse, RegisterPayload, RegisterResponse, UserAddress } from "./types";
+import type {
+  Credentials,
+  LoginResponse,
+  RegisterPayload,
+  RegisterResponse,
+  UserAddress,
+  CreateAddressPayload,
+  UpdateAddressPayload,
+} from "./types";
 
 export const MOCK_ADDRESSES: UserAddress[] = [
   {
-    addressId: "a1",
+    addressId: "a1000000-0000-0000-0000-000000000001",
     userId: "u1",
-    receiverName: "Khách Hàng Demo",
+    receiverName: "Nguyen Van A",
     phoneNumber: "0901234567",
-    addressLine1: "12 Nguyễn Huệ",
-    ward: "Bến Nghé",
+    addressLine1: "123 Le Loi",
+    ward: "Phường Bến Nghé",
     district: "Quận 1",
     city: "TP. Hồ Chí Minh",
     isDefault: true,
@@ -34,10 +42,112 @@ export async function register(payload: RegisterPayload): Promise<RegisterRespon
       role: "Customer",
       createdAt: new Date().toISOString(),
     },
-    400,
+    400
   );
 }
 
+/**
+ * Client API 2.1: Lấy Danh Sách Địa Chỉ Của Tôi (GET /api/user/addresses)
+ */
 export async function getAddresses(): Promise<UserAddress[]> {
-  return mock(MOCK_ADDRESSES);
+  return getMyAddressesApi();
+}
+
+export async function getMyAddressesApi(): Promise<UserAddress[]> {
+  if (useMockData) {
+    return mock(MOCK_ADDRESSES);
+  }
+
+  const res = await request<UserAddress[] | { items: UserAddress[] }>("/api/user/addresses");
+  if (Array.isArray(res)) return res;
+  if (res && typeof res === "object" && "items" in res && Array.isArray(res.items)) {
+    return res.items;
+  }
+  return [];
+}
+
+/**
+ * Client API 2.2: Thêm Địa Chỉ Mới (POST /api/user/addresses)
+ */
+export async function createAddressApi(payload: CreateAddressPayload): Promise<UserAddress> {
+  if (useMockData) {
+    const newAddr: UserAddress = {
+      addressId: crypto.randomUUID(),
+      ...payload,
+    };
+    if (payload.isDefault) {
+      MOCK_ADDRESSES.forEach((a) => (a.isDefault = false));
+    }
+    MOCK_ADDRESSES.unshift(newAddr);
+    return mock(newAddr);
+  }
+
+  return request<UserAddress>("/api/user/addresses", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+/**
+ * Client API 2.3: Cập Nhật Địa Chỉ (PUT /api/user/addresses/{addressId})
+ */
+export async function updateAddressApi(
+  addressId: string,
+  payload: UpdateAddressPayload
+): Promise<UserAddress> {
+  if (useMockData) {
+    const idx = MOCK_ADDRESSES.findIndex((a) => a.addressId === addressId);
+    if (idx !== -1) {
+      if (payload.isDefault) {
+        MOCK_ADDRESSES.forEach((a) => (a.isDefault = false));
+      }
+      MOCK_ADDRESSES[idx] = { ...MOCK_ADDRESSES[idx], ...payload };
+      return mock(MOCK_ADDRESSES[idx]);
+    }
+    return mock({ addressId, ...payload });
+  }
+
+  return request<UserAddress>(`/api/user/addresses/${addressId}`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+/**
+ * Client API 2.4: Đặt Làm Địa Chỉ Mặc Định 1-Click (PUT /api/user/addresses/{addressId}/set-default)
+ */
+export async function setDefaultAddressApi(addressId: string): Promise<boolean> {
+  if (useMockData) {
+    MOCK_ADDRESSES.forEach((a) => {
+      a.isDefault = a.addressId === addressId;
+    });
+    return mock(true);
+  }
+
+  const res = await request<boolean | { isSuccess?: boolean }>(
+    `/api/user/addresses/${addressId}/set-default`,
+    {
+      method: "PUT",
+    }
+  );
+  return Boolean(res);
+}
+
+/**
+ * Client API 2.5: Xóa Địa Chỉ (DELETE /api/user/addresses/{addressId})
+ */
+export async function deleteAddressApi(addressId: string): Promise<boolean> {
+  if (useMockData) {
+    const idx = MOCK_ADDRESSES.findIndex((a) => a.addressId === addressId);
+    if (idx !== -1) MOCK_ADDRESSES.splice(idx, 1);
+    return mock(true);
+  }
+
+  const res = await request<boolean | { isSuccess?: boolean }>(
+    `/api/user/addresses/${addressId}`,
+    {
+      method: "DELETE",
+    }
+  );
+  return Boolean(res);
 }

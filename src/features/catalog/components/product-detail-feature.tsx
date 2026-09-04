@@ -300,7 +300,7 @@ export function ProductDetailFeature({ product }: { product: Product }) {
             <div className="mt-8">
               <div className="flex items-center justify-between">
                 <p className="eyebrow">Size</p>
-                <SizeGuideDialog rows={product.sizeGuide} />
+                <SizeGuideDialog productId={product.productId} rows={product.sizeGuide} />
               </div>
               <div className="mt-3 grid grid-cols-5 gap-2">
                 {sizesForColor.map((variant) => {

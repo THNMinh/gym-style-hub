@@ -14,7 +14,7 @@ export type AddressType = "Home" | "Office";
 
 export interface UserAddress {
   addressId: string;
-  userId: string;
+  userId?: string;
   receiverName: string;
   phoneNumber: string;
   addressLine1: string;
@@ -22,8 +22,22 @@ export interface UserAddress {
   district: string;
   city: string;
   isDefault: boolean;
-  addressType: AddressType;
+  addressType: AddressType | string;
+  createdAt?: string;
 }
+
+export interface CreateAddressPayload {
+  receiverName: string;
+  phoneNumber: string;
+  addressLine1: string;
+  ward: string;
+  district: string;
+  city: string;
+  isDefault: boolean;
+  addressType: AddressType | string;
+}
+
+export interface UpdateAddressPayload extends CreateAddressPayload {}
 
 export interface Credentials {
   email: string;

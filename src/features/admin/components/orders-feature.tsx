@@ -146,7 +146,7 @@ export function OrdersFeature() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 md:p-8 space-y-6 max-w-[1400px] mx-auto">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -231,25 +231,24 @@ export function OrdersFeature() {
           <table className="w-full text-left text-sm">
             <thead className="bg-muted/50 border-b border-border text-xs uppercase font-bold text-muted-foreground">
               <tr>
-                <th className="py-3.5 px-4">Mã Đơn Hàng</th>
-                <th className="py-3.5 px-4">Khách hàng</th>
-                <th className="py-3.5 px-4">Địa chỉ giao hàng</th>
-                <th className="py-3.5 px-4">Tổng tiền</th>
-                <th className="py-3.5 px-4">Thanh toán</th>
-                <th className="py-3.5 px-4 text-center">Trạng thái</th>
-                <th className="py-3.5 px-4 text-right">Thao tác Admin</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Mã Đơn Hàng</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Khách hàng</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Tổng tiền</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Thanh toán</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap">Trạng thái</th>
+                <th className="py-3.5 px-6 text-right whitespace-nowrap min-w-[280px]">Thao tác Admin</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={6} className="py-12 text-center text-muted-foreground">
                     Đang tải danh sách đơn hàng...
                   </td>
                 </tr>
               ) : !orders || orders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={6} className="py-12 text-center text-muted-foreground">
                     Chưa có đơn hàng nào phù hợp với điều kiện tìm kiếm.
                   </td>
                 </tr>
@@ -257,17 +256,14 @@ export function OrdersFeature() {
                 orders.map((order) => {
                   return (
                     <tr key={order.orderId} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-extrabold text-xs text-primary">
+                      <td className="py-3.5 px-4 font-mono font-extrabold text-xs text-primary whitespace-nowrap">
                         {order.orderCode}
                       </td>
-                      <td className="py-3.5 px-4 font-medium">{order.userEmail || order.customerEmail || "N/A"}</td>
-                      <td className="py-3.5 px-4 text-xs text-muted-foreground max-w-xs truncate">
-                        {order.shippingAddress}
-                      </td>
-                      <td className="py-3.5 px-4 font-bold text-foreground">
+                      <td className="py-3.5 px-4 font-medium whitespace-nowrap">{order.userEmail || order.customerEmail || "N/A"}</td>
+                      <td className="py-3.5 px-4 font-bold text-foreground whitespace-nowrap">
                         {formatPrice(order.totalAmount)}
                       </td>
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <Badge variant="outline" className="text-[10px] uppercase font-bold">
                             {PAYMENT_METHOD_LABEL[order.paymentMethod] || order.paymentMethod}
@@ -283,36 +279,38 @@ export function OrdersFeature() {
                           </Badge>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         {getStatusBadge(order.currentStatus)}
                       </td>
-                      <td className="py-3.5 px-4 text-right space-x-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setTrackingOrderId(order.orderId)}
-                          className="h-8 text-xs font-semibold text-blue-600 hover:text-blue-700"
-                          title="Xem Timeline Chi tiết"
-                        >
-                          <Eye className="size-3.5 mr-1" /> Timeline
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenUpdateModal(order)}
-                          className="h-8 text-xs font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                        >
-                          <Edit3 className="size-3.5 mr-1" /> Cập nhật
-                        </Button>
-                        <Button
-                          size="sm"
-                          disabled={shipMutation.isPending}
-                          onClick={() => shipMutation.mutate(order.orderId)}
-                          className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1 shadow-sm"
-                          title="Xuất kho giao hàng ngay"
-                        >
-                          <Truck className="size-3.5" /> Ship Đơn
-                        </Button>
+                      <td className="py-3.5 px-6 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setTrackingOrderId(order.orderId)}
+                            className="h-8 px-2.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Xem chi tiết đơn hàng & timeline"
+                          >
+                            <Eye className="size-3.5 mr-1" /> Chi tiết đơn
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenUpdateModal(order)}
+                            className="h-8 px-2.5 text-xs font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                          >
+                            <Edit3 className="size-3.5 mr-1" /> Cập nhật
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={shipMutation.isPending}
+                            onClick={() => shipMutation.mutate(order.orderId)}
+                            className="h-8 px-2.5 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1 shadow-xs"
+                            title="Xuất kho giao hàng ngay"
+                          >
+                            <Truck className="size-3.5" /> Ship Đơn
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
