@@ -1,6 +1,7 @@
 import { useAuthStore } from "@/features/auth/store";
-import { User, Bell, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { NotificationBell } from "@/features/notification/components/notification-bell";
 
 export function AdminHeader({ title }: { title: string }) {
   const user = useAuthStore((s) => s.user);
@@ -12,14 +13,7 @@ export function AdminHeader({ title }: { title: string }) {
       </div>
 
       <div className="flex items-center gap-4">
-        <button
-          type="button"
-          aria-label="Thông báo"
-          className="relative p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
-        >
-          <Bell className="size-5" />
-          <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
-        </button>
+        <NotificationBell />
 
         <div className="h-6 w-px bg-border" />
 

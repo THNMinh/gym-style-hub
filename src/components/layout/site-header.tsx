@@ -10,6 +10,8 @@ import { useHydrated } from "@/shared/hooks/use-hydrated";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 
+import { NotificationBell } from "@/features/notification/components/notification-bell";
+
 const NAV = [
   { label: "Nam", gender: "Men" },
   { label: "Nữ", gender: "Women" },
@@ -120,6 +122,7 @@ export function SiteHeader() {
               <span className="absolute -bottom-1 left-1/2 h-0.5 w-4 -translate-x-1/2 bg-primary" />
             ) : null}
           </Link>
+          <NotificationBell />
           <Link to="/wishlist" aria-label="Yêu thích" className="relative">
             <Heart className="size-5" />
             <CountBadge value={hydrated && user ? wishlist.length : 0} />

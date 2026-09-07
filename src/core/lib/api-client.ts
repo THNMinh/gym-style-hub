@@ -130,9 +130,9 @@ export async function request<T>(
     return undefined as T;
   }
 
-  // Tự động bóc tách Response Envelope (ApiResult<T>)
+  // Tự động bóc tách Response Envelope (ApiResult<T> / Result<T>)
   if (typeof json === "object" && json !== null && "isSuccess" in json) {
-    const envelope = json as ApiResult<T>;
+    const envelope = json as ApiResult<T> & { value?: T };
     if (envelope.isSuccess === false) {
       const errMsg =
         typeof envelope.error === "object" && envelope.error?.message
@@ -142,7 +142,7 @@ export async function request<T>(
           : "API Request Failed";
       throw new ApiError(errMsg, response.status);
     }
-    return envelope.data as T;
+    return (envelope.data !== undefined ? envelope.data : (envelope.value as T)) as T;
   }
 
   return json as T;
