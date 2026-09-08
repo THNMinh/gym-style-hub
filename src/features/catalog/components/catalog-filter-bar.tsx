@@ -111,10 +111,6 @@ export function CatalogFilterBar({
       label: `Size ${s}`,
       clear: () => onChange({ sizes: filters.sizes.filter((v) => v !== s) }),
     })),
-    ...filters.fitTypes.map((f) => ({
-      label: f,
-      clear: () => onChange({ fitTypes: filters.fitTypes.filter((v) => v !== f) }),
-    })),
     ...(filters.minPrice != null || filters.maxPrice != null
       ? [
           {
@@ -223,24 +219,6 @@ export function CatalogFilterBar({
                 )}
               >
                 {size}
-              </button>
-            ))}
-          </div>
-        </FilterDropdown>
-
-        <FilterDropdown label="Kiểu dáng" count={filters.fitTypes.length}>
-          <div className="flex flex-col">
-            {getAllFitTypes().map((fit) => (
-              <button
-                key={fit}
-                type="button"
-                onClick={() => onChange({ fitTypes: toggle(filters.fitTypes, fit) })}
-                className={cn(
-                  "py-2 text-left text-sm",
-                  filters.fitTypes.includes(fit) ? "font-bold" : "text-muted-foreground",
-                )}
-              >
-                {fit}
               </button>
             ))}
           </div>

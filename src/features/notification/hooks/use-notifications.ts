@@ -54,6 +54,15 @@ export function useNotifications() {
         queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       }
 
+      // Tự động làm mới danh sách sản phẩm, cart & wishlist khi có cập nhật sản phẩm / ẩn sản phẩm từ Admin
+      if (incoming.type === "PRODUCT_UPDATED" || (incoming as any).productId) {
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+        queryClient.invalidateQueries({ queryKey: ["wishlist-full-products"] });
+        queryClient.invalidateQueries({ queryKey: ["cart-products-validation"] });
+        queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      }
+
       toast.info(incoming.title, {
         description: incoming.content,
         action: incoming.targetUrl

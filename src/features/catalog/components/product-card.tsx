@@ -144,10 +144,16 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
     return STANDARD_SIZES;
   }, [sizeAvailabilityMap]);
 
+  const isInactive = product.isActive === false;
+  const hasAnyStock = (product.variants || []).some((v) => v.available > 0);
+
   return (
     <article className="group relative flex flex-col h-full select-none">
       {/* Image & Quick-Size Overlay Container */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted rounded-lg shadow-xs">
+      <div className={cn(
+        "relative aspect-[3/4] w-full overflow-hidden bg-muted rounded-lg shadow-xs transition-opacity duration-300",
+        (isInactive || !hasAnyStock) && "opacity-75 grayscale-[20%]"
+      )}>
         <Link
           to="/products/$slug"
           params={{ slug: product.productId }}
@@ -181,7 +187,15 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
         </button>
 
         {/* Badge */}
-        {off ? (
+        {isInactive ? (
+          <span className="absolute left-2.5 top-2.5 z-20 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-xs shadow-xs">
+            Tạm ngưng bán
+          </span>
+        ) : !hasAnyStock ? (
+          <span className="absolute left-2.5 top-2.5 z-20 bg-amber-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white rounded-xs shadow-xs">
+            Hết hàng
+          </span>
+        ) : off ? (
           <span className="absolute left-2.5 top-2.5 z-20 bg-rose-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white rounded-xs shadow-xs">
             -{off}%
           </span>
@@ -192,43 +206,45 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
         ) : null}
 
         {/* Gymshark Style Hover Quick-Size Grid Overlay */}
-        <div className="absolute inset-x-2 bottom-2 z-20 hidden group-hover:flex flex-col bg-background/95 backdrop-blur-md p-2 rounded-md shadow-xl border border-border/80 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 animate-in fade-in-50 slide-in-from-bottom-2">
-          <p className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground text-center mb-1.5 flex items-center justify-center gap-1">
-            <ShoppingBag className="size-3 text-primary" /> Chọn Size nhanh
-          </p>
-          <div className="grid grid-cols-4 sm:grid-cols-4 gap-1 text-center">
-            {displaySizes.map((sz) => {
-              const matchedVariant = sizeAvailabilityMap.get(sz.toUpperCase());
-              const isAvailable = matchedVariant && matchedVariant.available > 0;
+        {!isInactive && (
+          <div className="absolute inset-x-2 bottom-2 z-20 hidden group-hover:flex flex-col bg-background/95 backdrop-blur-md p-2 rounded-md shadow-xl border border-border/80 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 animate-in fade-in-50 slide-in-from-bottom-2">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground text-center mb-1.5 flex items-center justify-center gap-1">
+              <ShoppingBag className="size-3 text-primary" /> Chọn Size nhanh
+            </p>
+            <div className="grid grid-cols-4 sm:grid-cols-4 gap-1 text-center">
+              {displaySizes.map((sz) => {
+                const matchedVariant = sizeAvailabilityMap.get(sz.toUpperCase());
+                const isAvailable = matchedVariant && matchedVariant.available > 0;
 
-              if (isAvailable && matchedVariant) {
+                if (isAvailable && matchedVariant) {
+                  return (
+                    <button
+                      key={sz}
+                      type="button"
+                      onClick={(e) => handleQuickAddToCart(e, matchedVariant)}
+                      className="h-8 flex items-center justify-center rounded border border-border/80 bg-background text-xs font-bold text-foreground transition-all duration-150 hover:bg-primary hover:text-primary-foreground hover:border-primary active:scale-95 shadow-2xs"
+                      title={`Thêm Size ${sz} (${matchedVariant.colorName}) vào giỏ`}
+                    >
+                      {sz}
+                    </button>
+                  );
+                }
+
                 return (
                   <button
                     key={sz}
                     type="button"
-                    onClick={(e) => handleQuickAddToCart(e, matchedVariant)}
-                    className="h-8 flex items-center justify-center rounded border border-border/80 bg-background text-xs font-bold text-foreground transition-all duration-150 hover:bg-primary hover:text-primary-foreground hover:border-primary active:scale-95 shadow-2xs"
-                    title={`Thêm Size ${sz} (${matchedVariant.colorName}) vào giỏ`}
+                    disabled
+                    className="h-8 relative overflow-hidden flex items-center justify-center rounded border border-border/40 bg-muted/40 text-xs font-semibold text-muted-foreground/40 opacity-50 cursor-not-allowed before:absolute before:inset-0 before:m-auto before:h-[1px] before:w-full before:bg-muted-foreground/50 before:rotate-[25deg]"
+                    title={`Size ${sz} tạm hết hàng`}
                   >
                     {sz}
                   </button>
                 );
-              }
-
-              return (
-                <button
-                  key={sz}
-                  type="button"
-                  disabled
-                  className="h-8 relative overflow-hidden flex items-center justify-center rounded border border-border/40 bg-muted/40 text-xs font-semibold text-muted-foreground/40 opacity-50 cursor-not-allowed before:absolute before:inset-0 before:m-auto before:h-[1px] before:w-full before:bg-muted-foreground/50 before:rotate-[25deg]"
-                  title={`Size ${sz} tạm hết hàng`}
-                >
-                  {sz}
-                </button>
-              );
-            })}
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Card Info Details */}
