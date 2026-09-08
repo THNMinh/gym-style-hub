@@ -35,11 +35,17 @@ export function ProductDetailFeature({ product }: { product: Product }) {
   );
   const hasVariantData = product.variants.length > 0;
 
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(() => colors[0]?.[0] || null);
   const [size, setSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [zoomImageIndex, setZoomImageIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!selectedColor && colors[0]?.[0]) {
+      setSelectedColor(colors[0][0]);
+    }
+  }, [colors, selectedColor]);
 
   const galleryScrollRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);

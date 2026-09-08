@@ -1,10 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, X } from "lucide-react";
 import { PRODUCT_SORTS, type Gender, type ProductSort } from "@/entities/catalog/types";
 import {
   getAllColors,
   getAllFitTypes,
   getAllSizes,
-  getCategoryOptions,
+  getCategories,
 } from "@/entities/catalog/services";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,6 +18,8 @@ export interface CatalogFilters {
   sizes: string[];
   fitTypes: string[];
   sort: ProductSort;
+  minPrice?: number | null;
+  maxPrice?: number | null;
 }
 
 export const EMPTY_FILTERS: CatalogFilters = {
@@ -26,6 +29,8 @@ export const EMPTY_FILTERS: CatalogFilters = {
   sizes: [],
   fitTypes: [],
   sort: "featured",
+  minPrice: null,
+  maxPrice: null,
 };
 
 const GENDERS: { value: Gender | "All"; label: string }[] = [
@@ -77,8 +82,14 @@ export function CatalogFilterBar({
   const toggle = (list: string[], value: string) =>
     list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 
-  const categories = getCategoryOptions();
-  const activeCategory = categories.find((c) => c.slug === filters.categorySlug);
+  const categoriesQuery = useQuery({
+    queryKey: ["categories-filter"],
+    queryFn: getCategories,
+  });
+  const categories = categoriesQuery.data || [];
+  const activeCategory = categories.find(
+    (c) => c.slug === filters.categorySlug || c.categoryId === filters.categorySlug,
+  );
 
   const chips: { label: string; clear: () => void }[] = [
     ...(filters.gender !== "All"
@@ -104,6 +115,19 @@ export function CatalogFilterBar({
       label: f,
       clear: () => onChange({ fitTypes: filters.fitTypes.filter((v) => v !== f) }),
     })),
+    ...(filters.minPrice != null || filters.maxPrice != null
+      ? [
+          {
+            label:
+              filters.minPrice && filters.maxPrice
+                ? `${filters.minPrice.toLocaleString("vi-VN")}₫ - ${filters.maxPrice.toLocaleString("vi-VN")}₫`
+                : filters.minPrice
+                ? `Từ ${filters.minPrice.toLocaleString("vi-VN")}₫`
+                : `Dưới ${filters.maxPrice?.toLocaleString("vi-VN")}₫`,
+            clear: () => onChange({ minPrice: null, maxPrice: null }),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -142,7 +166,7 @@ export function CatalogFilterBar({
             </button>
             {categories.map((category) => (
               <button
-                key={category.slug}
+                key={category.categoryId}
                 type="button"
                 onClick={() =>
                   onChange({
@@ -219,6 +243,47 @@ export function CatalogFilterBar({
                 {fit}
               </button>
             ))}
+          </div>
+        </FilterDropdown>
+
+        <FilterDropdown
+          label="Giá"
+          count={filters.minPrice != null || filters.maxPrice != null ? 1 : 0}
+        >
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => onChange({ minPrice: null, maxPrice: null })}
+              className={cn(
+                "py-2 text-left text-sm",
+                filters.minPrice == null && filters.maxPrice == null
+                  ? "font-bold"
+                  : "text-muted-foreground",
+              )}
+            >
+              Tất cả giá
+            </button>
+            {[
+              { label: "Dưới 300.000₫", min: null, max: 300000 },
+              { label: "300.000₫ - 500.000₫", min: 300000, max: 500000 },
+              { label: "500.000₫ - 1.000.000₫", min: 500000, max: 1000000 },
+              { label: "Trên 1.000.000₫", min: 1000000, max: null },
+            ].map((p) => {
+              const isSelected = filters.minPrice === p.min && filters.maxPrice === p.max;
+              return (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => onChange({ minPrice: p.min, maxPrice: p.max })}
+                  className={cn(
+                    "py-2 text-left text-sm",
+                    isSelected ? "font-bold" : "text-muted-foreground",
+                  )}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
           </div>
         </FilterDropdown>
 

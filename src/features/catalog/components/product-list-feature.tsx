@@ -32,6 +32,8 @@ export function ProductListFeature({
         sort: filters.sort,
         page,
         pageSize: PAGE_SIZE,
+        ...(filters.minPrice != null ? { minPrice: filters.minPrice } : {}),
+        ...(filters.maxPrice != null ? { maxPrice: filters.maxPrice } : {}),
         ...(filters.categorySlug ? { categorySlug: filters.categorySlug } : {}),
         ...(search ? { search } : {}),
       }),
@@ -76,7 +78,7 @@ export function ProductListFeature({
             ))}
           </div>
         ) : (
-          <ProductGrid products={products} />
+          <ProductGrid products={products} selectedColors={filters.colors} />
         )}
       </div>
 

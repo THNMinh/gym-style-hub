@@ -331,7 +331,7 @@ export async function getProductsAdminApi(
 ): Promise<ProductPaginatedResponse> {
   try {
     const res = await request<ProductPaginatedResponse | AdminProductDto[] | { items: AdminProductDto[]; totalCount?: number; totalPages?: number }>(
-      `/api/products?page=${page}&pageSize=${pageSize}`,
+      `/api/products?page=${page}&pageSize=${pageSize}&activeState=all`,
     );
 
     if (Array.isArray(res)) {

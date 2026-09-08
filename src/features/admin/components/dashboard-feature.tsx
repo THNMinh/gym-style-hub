@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ShoppingBag,
   AlertTriangle,
@@ -8,38 +9,103 @@ import {
   TrendingUp,
   Clock,
   Truck,
+  RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/shared/lib/format";
+import { formatPrice, formatDate } from "@/shared/lib/format";
+import {
+  getAdminOrdersApi,
+  getInventoryApi,
+  getProductsAdminApi,
+  getCategoriesApi,
+  getFinanceTransactionsApi,
+} from "@/entities/admin/services";
+import { ORDER_STATUS_LABEL } from "@/entities/order/types";
 
 export function DashboardFeature() {
+  // Fetch Real Admin Orders Data
+  const ordersQuery = useQuery({
+    queryKey: ["admin-dashboard-orders"],
+    queryFn: () => getAdminOrdersApi({ page: 1, pageSize: 100 }),
+  });
+
+  // Fetch Real Admin Inventory Data
+  const inventoryQuery = useQuery({
+    queryKey: ["admin-dashboard-inventory"],
+    queryFn: () => getInventoryApi({ page: 1, pageSize: 100 }),
+  });
+
+  // Fetch Real Admin Catalog Products
+  const productsQuery = useQuery({
+    queryKey: ["admin-dashboard-products"],
+    queryFn: () => getProductsAdminApi(1, 100),
+  });
+
+  // Fetch Real Categories
+  const categoriesQuery = useQuery({
+    queryKey: ["admin-dashboard-categories"],
+    queryFn: getCategoriesApi,
+  });
+
+  // Fetch Real Finance Transactions
+  const financeQuery = useQuery({
+    queryKey: ["admin-dashboard-finance"],
+    queryFn: () => getFinanceTransactionsApi({ page: 1, pageSize: 20 }),
+  });
+
+  const orders = ordersQuery.data?.items || [];
+  const inventoryItems = inventoryQuery.data?.items || [];
+  const products = productsQuery.data?.items || [];
+  const categories = categoriesQuery.data || [];
+  const transactions = financeQuery.data?.items || [];
+
+  // KPI Calculations
+  const totalRevenue = orders.reduce((sum, o) => {
+    return o.paymentStatus === "Paid" || o.currentStatus === "Delivered" || o.currentStatus === "Shipped"
+      ? sum + (o.totalAmount || 0)
+      : sum;
+  }, 0);
+
+  const processingOrdersCount = orders.filter(
+    (o) => o.currentStatus === "Pending" || o.currentStatus === "Processing"
+  ).length;
+
+  const shippedOrdersCount = orders.filter((o) => o.currentStatus === "Shipped").length;
+
+  const lowStockItems = inventoryItems.filter(
+    (i) => (i.availableStock ?? i.quantityOnHand ?? 0) <= 15
+  );
+
+  const totalProductsCount = productsQuery.data?.totalCount || products.length;
+  const totalCategoriesCount = categories.length;
+
   const kpiData = [
     {
       title: "Tổng doanh thu",
-      value: formatPrice(128500000),
-      change: "+18.2% so với tháng trước",
+      value: formatPrice(totalRevenue),
+      change: `${orders.length} tổng đơn hàng ghi nhận`,
       icon: DollarSign,
       color: "text-emerald-600 bg-emerald-100 dark:bg-emerald-950/40",
     },
     {
       title: "Đơn hàng đang xử lý",
-      value: "14 đơn",
-      change: "4 đơn chờ giao hàng (Ship)",
+      value: `${processingOrdersCount} đơn`,
+      change: `${shippedOrdersCount} đơn đang trên đường giao (Ship)`,
       icon: ShoppingBag,
       color: "text-blue-600 bg-blue-100 dark:bg-blue-950/40",
     },
     {
       title: "Cảnh báo tồn kho thấp",
-      value: "3 biến thể",
-      change: "Cần nhập bổ sung kho ngay",
+      value: `${lowStockItems.length} biến thể`,
+      change: lowStockItems.length > 0 ? "Cần nhập bổ sung kho ngay" : "Kho hàng ổn định",
       icon: AlertTriangle,
       color: "text-amber-600 bg-amber-100 dark:bg-amber-950/40",
     },
     {
       title: "Tổng sản phẩm Catalog",
-      value: "42 sản phẩm",
-      change: "8 danh mục sản phẩm",
+      value: `${totalProductsCount} sản phẩm`,
+      change: `${totalCategoriesCount} danh mục sản phẩm`,
       icon: Layers,
       color: "text-purple-600 bg-purple-100 dark:bg-purple-950/40",
     },
@@ -76,8 +142,38 @@ export function DashboardFeature() {
     },
   ];
 
+  const isLoading =
+    ordersQuery.isLoading ||
+    inventoryQuery.isLoading ||
+    productsQuery.isLoading ||
+    categoriesQuery.isLoading;
+
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
+      {/* Header & Refresh */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Tổng quan Quản trị (CMS Dashboard)</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Báo cáo tổng hợp số liệu thực tế về Doanh thu, Đơn hàng, Tồn kho và Catalog GymKitten
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            ordersQuery.refetch();
+            inventoryQuery.refetch();
+            productsQuery.refetch();
+            categoriesQuery.refetch();
+            financeQuery.refetch();
+          }}
+          className="gap-2 text-xs"
+        >
+          <RefreshCw className="size-3.5" /> Làm mới dữ liệu
+        </Button>
+      </div>
+
       {/* Top KPI Banner */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {kpiData.map((item) => {
@@ -95,7 +191,7 @@ export function DashboardFeature() {
                 </div>
                 <div className="mt-4">
                   <h3 className="text-2xl font-extrabold tracking-tight text-foreground">
-                    {item.value}
+                    {isLoading ? "..." : item.value}
                   </h3>
                   <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1 font-medium">
                     <TrendingUp className="size-3 text-emerald-600" /> {item.change}
@@ -148,36 +244,37 @@ export function DashboardFeature() {
         </div>
       </div>
 
-      {/* Recent Activities */}
+      {/* Live Recent Activities from DB */}
       <Card className="border border-border/80 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base font-bold flex items-center gap-2">
-            <Clock className="size-4 text-primary" /> Lịch sử vận hành gần đây
+            <Clock className="size-4 text-primary" /> Đơn hàng & Lịch sử vận hành gần đây (Live Data)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4 text-xs">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div>
-                <p className="font-semibold text-foreground">Xác nhận giao hàng đơn #GK-ORD-20260820-003</p>
-                <p className="text-muted-foreground">Chuyển trạng thái sang Shipped</p>
-              </div>
-              <span className="text-muted-foreground font-mono">10 phút trước</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div>
-                <p className="font-semibold text-foreground">Bổ sung kho SKU: GK-HOODIE-ONYX-V1-M</p>
-                <p className="text-muted-foreground">Thêm 50 sản phẩm vào kho</p>
-              </div>
-              <span className="text-muted-foreground font-mono">1 giờ trước</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-foreground">Thanh toán MoMo thành công cho đơn #GK-ORD-20260820-001</p>
-                <p className="text-muted-foreground">Số tiền: 1.085.000 ₫</p>
-              </div>
-              <span className="text-muted-foreground font-mono">3 giờ trước</span>
-            </div>
+            {orders.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">Chưa có dữ liệu vận hành đơn hàng.</p>
+            ) : (
+              orders.slice(0, 5).map((ord) => (
+                <div key={ord.orderId} className="flex items-center justify-between border-b border-border/60 pb-3 last:border-b-0 last:pb-0">
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-foreground flex items-center gap-2">
+                      <span>Đơn hàng #{ord.orderCode}</span>
+                      <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-primary/10 text-primary">
+                        {ORDER_STATUS_LABEL[ord.currentStatus] || ord.currentStatus}
+                      </span>
+                    </p>
+                    <p className="text-muted-foreground">
+                      Khách hàng: <strong className="text-foreground">{ord.userEmail || "N/A"}</strong> — Giá trị: <strong className="text-emerald-600">{formatPrice(ord.totalAmount)}</strong>
+                    </p>
+                  </div>
+                  <span className="text-muted-foreground font-mono text-[11px] shrink-0 ml-4">
+                    {formatDate(ord.createdAt || new Date().toISOString())}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

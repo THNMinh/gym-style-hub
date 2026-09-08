@@ -32,6 +32,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         String(tokenRole).toLowerCase() === "admin")
   );
 
+  useEffect(() => {
+    if (hydrated && !accessToken) {
+      navigate({ to: "/auth", search: { redirect: "/admin/dashboard" } as never });
+    }
+  }, [hydrated, accessToken, navigate]);
+
   if (!hydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground text-xs font-semibold">

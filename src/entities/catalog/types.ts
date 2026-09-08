@@ -72,6 +72,8 @@ export interface ProductListQuery {
   sort?: ProductSort;
   page?: number;
   pageSize?: number;
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 export interface PagedResult<T> {

@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatPrice } from "@/shared/lib/format";
 import { AdminPagination } from "./admin-pagination";
+import { cn } from "@/lib/utils";
 
 // Zod Schemas for Product, Variant & Category Forms
 const categorySchema = z.object({
@@ -85,8 +86,14 @@ const variantSchema = z.object({
   colorName: z.string().min(1, "Nhập tên màu"),
   colorHex: z.string().min(4, "Mã màu hex (VD: #000000)"),
   size: z.string().min(1, "Vui lòng nhập size (S, M, L, XL...)"),
-  price: z.number().min(1000, "Giá sản phẩm phải lớn hơn 1.000đ"),
-  originalPrice: z.number().optional(),
+  price: z.coerce
+    .number({ invalid_type_error: "Giá sản phẩm phải là số" })
+    .min(1000, "Giá sản phẩm phải lớn hơn 1.000đ")
+    .max(1000000000, "Giá sản phẩm không được vượt quá 1.000.000.000đ"),
+  originalPrice: z.coerce
+    .number()
+    .max(1000000000, "Giá gốc không được vượt quá 1.000.000.000đ")
+    .optional(),
 });
 
 type CategoryFormValues = z.infer<typeof categorySchema>;
@@ -120,6 +127,7 @@ export function CatalogFeature() {
   const [editProduct, setEditProduct] = useState<AdminProductDto | null>(null);
 
   const [variantProduct, setVariantProduct] = useState<AdminProductDto | null>(null);
+  const [editingVariant, setEditingVariant] = useState<VariantDto | null>(null);
   const [imageProduct, setImageProduct] = useState<AdminProductDto | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
 
@@ -241,6 +249,13 @@ export function CatalogFeature() {
     enabled: !!imageProduct,
   });
 
+  // Query hình ảnh của sản phẩm khi mở modal quản lý biến thể
+  const variantProductImagesQuery = useQuery({
+    queryKey: ["admin-product-images", variantProduct?.productId],
+    queryFn: () => (variantProduct ? getProductImagesApi(variantProduct.productId) : Promise.resolve([])),
+    enabled: !!variantProduct,
+  });
+
   // Query hình ảnh hiện có của sản phẩm
   const productImagesQuery = useQuery({
     queryKey: ["admin-product-images", imageProduct?.productId],
@@ -325,6 +340,18 @@ export function CatalogFeature() {
     mutationFn: createVariantAdminApi,
     onSuccess: () => {
       toast.success("Thêm biến thể thành công!");
+      queryClient.invalidateQueries({ queryKey: ["admin-variants", variantProduct?.productId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  });
+
+  const updateVariantMutation = useMutation({
+    mutationFn: ({ variantId, payload }: { variantId: string; payload: Partial<VariantFormValues> }) =>
+      updateVariantAdminApi(variantId, payload),
+    onSuccess: () => {
+      toast.success("Cập nhật biến thể thành công!");
+      setEditingVariant(null);
       queryClient.invalidateQueries({ queryKey: ["admin-variants", variantProduct?.productId] });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
     },
@@ -719,14 +746,22 @@ export function CatalogFeature() {
       </Dialog>
 
       {/* ------------------------------------------------------------- */}
-      {/* MANAGE VARIANTS MODAL (GET/POST/DELETE /api/products/variants) */}
+      {/* MANAGE VARIANTS MODAL (GET/POST/PUT/DELETE /api/products/variants) */}
       {/* ------------------------------------------------------------- */}
-      <Dialog open={variantProduct !== null} onOpenChange={(open) => !open && setVariantProduct(null)}>
+      <Dialog
+        open={variantProduct !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setVariantProduct(null);
+            setEditingVariant(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-bold">Quản lý Biến thể (Variants) — {variantProduct?.name}</DialogTitle>
             <DialogDescription>
-              Xem danh sách biến thể Màu sắc/Size hiện có hoặc thêm biến thể mới cho sản phẩm.
+              Xem danh sách biến thể Màu sắc/Size hiện có hoặc thêm/sửa biến thể cho sản phẩm.
             </DialogDescription>
           </DialogHeader>
 
@@ -736,50 +771,151 @@ export function CatalogFeature() {
               <div className="bg-muted px-4 py-2 text-xs font-bold text-muted-foreground border-b flex justify-between">
                 <span>Biến thể hiện có ({variantsQuery.data?.length || 0})</span>
               </div>
-              <div className="max-h-48 overflow-y-auto divide-y">
+              <div className="max-h-56 overflow-y-auto divide-y">
                 {variantsQuery.isLoading ? (
                   <div className="p-4 text-center text-xs text-muted-foreground">Đang tải biến thể...</div>
                 ) : !variantsQuery.data || variantsQuery.data.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-muted-foreground">Chưa có biến thể nào. Hãy thêm ở form dưới!</div>
+                  <div className="p-4 text-center text-xs text-muted-foreground">
+                    Chưa có biến thể nào. Hãy thêm ở form dưới!
+                  </div>
                 ) : (
-                  variantsQuery.data.map((v) => (
-                    <div key={v.variantId} className="p-3 flex items-center justify-between text-xs hover:bg-muted/30">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-primary">{v.sku}</span>
-                          <span className="inline-block size-3.5 rounded-full border shadow-sm" style={{ backgroundColor: v.colorHex }} />
-                          <span className="font-semibold">{v.colorName}</span>
-                          <Badge variant="secondary" className="font-bold">{v.size}</Badge>
-                        </div>
-                        <p className="text-muted-foreground font-bold">{formatPrice(v.price)}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteVariantMutation.mutate(v.variantId)}
-                        className="h-7 text-destructive hover:bg-destructive/10 text-xs"
+                  variantsQuery.data.map((v) => {
+                    const matchedImg = variantProductImagesQuery.data?.find(
+                      (img) =>
+                        img.variantId === v.variantId ||
+                        (img.imageUrl && v.colorName && img.imageUrl.toLowerCase().includes(v.colorName.toLowerCase())),
+                    )?.imageUrl;
+
+                    const isBeingEdited = editingVariant?.variantId === v.variantId;
+
+                    return (
+                      <div
+                        key={v.variantId}
+                        className={cn(
+                          "p-3 flex items-center justify-between text-xs hover:bg-muted/30 transition-colors",
+                          isBeingEdited && "bg-primary/5 ring-1 ring-primary/40",
+                        )}
                       >
-                        <Trash2 className="size-3.5 mr-1" /> Xóa
-                      </Button>
-                    </div>
-                  ))
+                        <div className="flex items-center gap-3">
+                          {matchedImg ? (
+                            <img
+                              src={matchedImg}
+                              alt={v.colorName}
+                              className="size-10 rounded border object-cover shrink-0 shadow-xs"
+                            />
+                          ) : (
+                            <div className="size-10 rounded border bg-muted flex items-center justify-center shrink-0 text-muted-foreground">
+                              <ImageIcon className="size-4" />
+                            </div>
+                          )}
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-primary">{v.sku}</span>
+                              <span
+                                className="inline-block size-3.5 rounded-full border shadow-sm"
+                                style={{ backgroundColor: v.colorHex }}
+                              />
+                              <span className="font-semibold">{v.colorName}</span>
+                              <Badge variant="secondary" className="font-bold">
+                                {v.size}
+                              </Badge>
+                            </div>
+                            <p className="text-muted-foreground font-bold">{formatPrice(v.price)}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingVariant(v);
+                              variantForm.reset({
+                                productId: v.productId,
+                                sku: v.sku,
+                                colorName: v.colorName,
+                                colorHex: v.colorHex || "#000000",
+                                size: v.size,
+                                price: v.price,
+                                originalPrice: v.originalPrice ?? undefined,
+                              });
+                            }}
+                            className="h-7 text-xs text-primary hover:bg-primary/10"
+                          >
+                            <Edit3 className="size-3.5 mr-1" /> Sửa
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteVariantMutation.mutate(v.variantId)}
+                            className="h-7 text-destructive hover:bg-destructive/10 text-xs"
+                          >
+                            <Trash2 className="size-3.5 mr-1" /> Xóa
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
 
-            {/* Add Variant Form */}
+            {/* Add / Edit Variant Form */}
             <form
-              onSubmit={variantForm.handleSubmit((values) =>
-                createVariantMutation.mutate({
-                  ...values,
-                  price: Number(values.price),
-                })
-              )}
+              onSubmit={variantForm.handleSubmit((values) => {
+                if (editingVariant) {
+                  updateVariantMutation.mutate({
+                    variantId: editingVariant.variantId,
+                    payload: {
+                      ...values,
+                      price: Number(values.price),
+                    },
+                  });
+                } else {
+                  createVariantMutation.mutate({
+                    ...values,
+                    price: Number(values.price),
+                  });
+                }
+              })}
               className="space-y-4 p-4 border rounded-lg bg-muted/20"
             >
-              <h4 className="text-xs font-bold uppercase text-foreground flex items-center gap-1.5">
-                <Plus className="size-4 text-primary" /> Thêm biến thể mới
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase text-foreground flex items-center gap-1.5">
+                  {editingVariant ? (
+                    <>
+                      <Edit3 className="size-4 text-primary" /> Chỉnh sửa biến thể — {editingVariant.sku}
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="size-4 text-primary" /> Thêm biến thể mới
+                    </>
+                  )}
+                </h4>
+                {editingVariant && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-muted-foreground"
+                    onClick={() => {
+                      setEditingVariant(null);
+                      if (variantProduct) {
+                        variantForm.reset({
+                          productId: variantProduct.productId,
+                          sku: `${variantProduct.slug.toUpperCase()}-${Date.now().toString().slice(-4)}`,
+                          colorName: "Black",
+                          colorHex: "#000000",
+                          size: "M",
+                          price: 299000,
+                        });
+                      }
+                    }}
+                  >
+                    Hủy chỉnh sửa
+                  </Button>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="var-sku">Mã SKU (*)</Label>
@@ -862,14 +998,36 @@ export function CatalogFeature() {
                   className="h-9 text-xs"
                   {...variantForm.register("price", { valueAsNumber: true })}
                 />
+                {variantForm.formState.errors.price && (
+                  <p className="text-xs text-destructive">{variantForm.formState.errors.price.message}</p>
+                )}
               </div>
 
               <DialogFooter className="pt-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setVariantProduct(null)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setVariantProduct(null);
+                    setEditingVariant(null);
+                  }}
+                >
                   Đóng
                 </Button>
-                <Button type="submit" size="sm" disabled={createVariantMutation.isPending} className="font-bold">
-                  Lưu biến thể mới
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={createVariantMutation.isPending || updateVariantMutation.isPending}
+                  className="font-bold"
+                >
+                  {editingVariant
+                    ? updateVariantMutation.isPending
+                      ? "Đang lưu..."
+                      : "Cập nhật biến thể"
+                    : createVariantMutation.isPending
+                      ? "Đang lưu..."
+                      : "Lưu biến thể mới"}
                 </Button>
               </DialogFooter>
             </form>

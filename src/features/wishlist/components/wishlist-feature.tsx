@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getMyWishlist, mapWishlistItemToProduct } from "../services";
+import { getProductsByIds } from "@/entities/catalog/services";
 import { useWishlistStore } from "../store";
 import { ProductGrid } from "@/features/catalog/components/product-grid";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,17 @@ export function WishlistFeature() {
     queryKey: ["wishlist"],
     queryFn: () => getMyWishlist(1, 100),
     enabled: hydrated && !!user,
+  });
+
+  const productIds = useMemo(
+    () => query.data?.items.map((item) => item.productId) ?? [],
+    [query.data],
+  );
+
+  const fullProductsQuery = useQuery({
+    queryKey: ["wishlist-full-products", productIds],
+    queryFn: () => getProductsByIds(productIds),
+    enabled: productIds.length > 0,
   });
 
   useEffect(() => {
@@ -41,12 +53,18 @@ export function WishlistFeature() {
     );
   }
 
-  const products = (query.data?.items ?? []).map(mapWishlistItemToProduct);
+  const fallbackProducts = (query.data?.items ?? []).map(mapWishlistItemToProduct);
+  const products =
+    fullProductsQuery.data && fullProductsQuery.data.length > 0
+      ? fullProductsQuery.data
+      : fallbackProducts;
+
+  const isLoading = query.isLoading || (productIds.length > 0 && fullProductsQuery.isLoading);
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-12 lg:px-8">
       <h1 className="text-4xl">Yêu thích</h1>
-      {query.isLoading ? (
+      {isLoading ? (
         <div className="py-20 text-center text-sm text-muted-foreground">Đang tải danh sách yêu thích...</div>
       ) : products.length === 0 ? (
         <div className="py-20 text-center">

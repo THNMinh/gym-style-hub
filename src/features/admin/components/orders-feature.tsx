@@ -283,29 +283,31 @@ export function OrdersFeature() {
                         {getStatusBadge(order.currentStatus)}
                       </td>
                       <td className="py-3.5 px-6 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setTrackingOrderId(order.orderId)}
-                            className="h-8 px-2.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            title="Xem chi tiết đơn hàng & timeline"
-                          >
-                            <Eye className="size-3.5 mr-1" /> Chi tiết đơn
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenUpdateModal(order)}
-                            className="h-8 px-2.5 text-xs font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                          >
-                            <Edit3 className="size-3.5 mr-1" /> Cập nhật
-                          </Button>
+                        <div className="flex flex-col items-end gap-1.5 whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setTrackingOrderId(order.orderId)}
+                              className="h-8 px-2.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              title="Xem chi tiết đơn hàng & timeline"
+                            >
+                              <Eye className="size-3.5 mr-1" /> Chi tiết đơn
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenUpdateModal(order)}
+                              className="h-8 px-2.5 text-xs font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                            >
+                              <Edit3 className="size-3.5 mr-1" /> Cập nhật
+                            </Button>
+                          </div>
                           <Button
                             size="sm"
                             disabled={shipMutation.isPending}
                             onClick={() => shipMutation.mutate(order.orderId)}
-                            className="h-8 px-2.5 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1 shadow-xs"
+                            className="h-8 px-2.5 w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white justify-center gap-1 shadow-xs"
                             title="Xuất kho giao hàng ngay"
                           >
                             <Truck className="size-3.5" /> Ship Đơn

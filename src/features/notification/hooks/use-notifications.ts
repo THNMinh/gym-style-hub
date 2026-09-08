@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/store";
 import {
   getNotificationsApi,
@@ -14,6 +15,7 @@ export function useNotifications() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [notifications, setNotifications] = useState<NotificationPayload[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -37,12 +39,20 @@ export function useNotifications() {
   }, [accessToken]);
 
   const handleIncomingNotification = useCallback(
-    (incoming: NotificationPayload) => {
+    (incoming: NotificationPayload & { orderId?: string }) => {
       setUnreadCount((prev) => prev + 1);
       setNotifications((prev) => [
         incoming,
         ...prev.filter((n) => n.notificationId !== incoming.notificationId),
       ]);
+
+      // Tự động làm mới danh sách đơn hàng & chi tiết đơn hàng trên màn hình khi nhận được thông báo về Đơn hàng (Real-time update)
+      if (incoming.type === "Order" || incoming.orderId) {
+        queryClient.invalidateQueries({ queryKey: ["my-orders"] });
+        queryClient.invalidateQueries({ queryKey: ["client-order-detail"] });
+        queryClient.invalidateQueries({ queryKey: ["client-order-tracking"] });
+        queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      }
 
       toast.info(incoming.title, {
         description: incoming.content,
@@ -65,7 +75,7 @@ export function useNotifications() {
         audio.play().catch(() => {});
       } catch {}
     },
-    [navigate]
+    [navigate, queryClient]
   );
 
   useEffect(() => {

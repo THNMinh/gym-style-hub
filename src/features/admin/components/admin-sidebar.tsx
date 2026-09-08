@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Package,
@@ -26,12 +26,18 @@ const navigation = [
 
 export function AdminSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
+
+  const handleLogout = () => {
+    logout();
+    navigate({ to: "/auth" });
+  };
 
   return (
     <aside className="w-64 flex-shrink-0 bg-slate-900 text-slate-100 flex flex-col min-h-screen border-r border-slate-800">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-800 gap-3">
+      <Link to="/admin/dashboard" className="h-16 flex items-center px-6 border-b border-slate-800 gap-3 hover:bg-slate-800/50 transition-colors">
         <div className="size-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-black">
           <Dumbbell className="size-5" />
         </div>
@@ -41,7 +47,7 @@ export function AdminSidebar() {
             Admin CMS Portal
           </p>
         </div>
-      </div>
+      </Link>
 
       {/* Navigation List */}
       <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
@@ -86,7 +92,7 @@ export function AdminSidebar() {
 
         <button
           type="button"
-          onClick={() => logout()}
+          onClick={handleLogout}
           className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-lg transition-colors"
         >
           <LogOut className="size-4" />

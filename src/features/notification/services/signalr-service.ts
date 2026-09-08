@@ -34,7 +34,7 @@ class SignalRService {
         skipNegotiation: false,
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-      .configureLogging(signalR.LogLevel.Information)
+      .configureLogging(signalR.LogLevel.Warning)
       .build();
 
     this.hubConnection.on("ReceiveNotification", (notification: NotificationPayload) => {
@@ -51,14 +51,24 @@ class SignalRService {
     });
 
     this.hubConnection.onclose((error) => {
-      console.error("❌ [SignalR Closed] Kết nối đã đóng:", error);
+      if (error) {
+        console.warn("⚠️ [SignalR Closed] Kết nối đã đóng:", error);
+      }
     });
 
     try {
       await this.hubConnection.start();
       console.log("🚀 [SignalR Connected] Kết nối WebSocket thông báo thành công!");
-    } catch (error) {
-      console.error("❌ [SignalR Error] Kết nối thất bại:", error);
+    } catch (error: unknown) {
+      const errObj = error as { name?: string; message?: string };
+      const isAbort =
+        errObj?.name === "AbortError" ||
+        String(errObj?.message || "").includes("stopped during negotiation") ||
+        String(errObj?.message || "").includes("canceled");
+
+      if (!isAbort) {
+        console.warn("⚠️ [SignalR Warning] Kết nối WebSocket không thành công:", errObj?.message || error);
+      }
     } finally {
       this.isConnecting = false;
     }
@@ -66,13 +76,14 @@ class SignalRService {
 
   public async stopConnection(): Promise<void> {
     if (this.hubConnection) {
-      this.hubConnection.off("ReceiveNotification");
-      try {
-        await this.hubConnection.stop();
-      } catch (err) {
-        console.warn("Error stopping signalr connection:", err);
-      }
+      const conn = this.hubConnection;
       this.hubConnection = null;
+      conn.off("ReceiveNotification");
+      try {
+        await conn.stop();
+      } catch {
+        // Safe silent cleanup
+      }
       console.log("🛑 [SignalR Disconnected] Đã ngắt kết nối WebSocket.");
     }
   }
