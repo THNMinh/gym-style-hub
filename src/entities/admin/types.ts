@@ -64,6 +64,73 @@ export interface TransactionPaginatedResponse {
   totalPages: number;
 }
 
+// ==========================================
+// Inventory Transactions
+// ==========================================
+export interface InventoryTransactionDto {
+  transactionId: string;
+  variantId: string;
+  sku: string;
+  productName: string;
+  colorName: string;
+  size: string;
+  quantityChange: number;
+  type: "Import" | "Export" | "Reserve" | "Adjust" | string;
+  referenceId: string | null;
+  performer: string;
+  createdAt: string;
+}
+
+export interface InventoryTransactionsQueryParams {
+  variantId?: string;
+  sku?: string;
+  type?: string;
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface InventoryTransactionsResponse {
+  items: InventoryTransactionDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// ==========================================
+// System Audit Logs
+// ==========================================
+export interface SystemLogDto {
+  logId: string;
+  userId: string | null;
+  action: string;
+  message: string;
+  logLevel: "Information" | "Warning" | "Error" | string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface SystemLogsQueryParams {
+  action?: string;
+  logLevel?: string;
+  userId?: string;
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface SystemLogsResponse {
+  items: SystemLogDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface AdminOrderItem {
   orderId: string;
   orderCode: string;

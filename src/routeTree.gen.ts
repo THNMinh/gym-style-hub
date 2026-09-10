@@ -22,6 +22,7 @@ import { Route as AdminFinanceRouteImport } from './routes/admin/finance'
 import { Route as AdminInventoryRouteImport } from './routes/admin/inventory'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminReviewsRouteImport } from './routes/admin/reviews'
+import { Route as AdminSystemLogsRouteImport } from './routes/admin/system-logs'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
 import { Route as OrdersSuccessRouteImport } from './routes/orders.success'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
@@ -92,6 +93,11 @@ const AdminReviewsRoute = AdminReviewsRouteImport.update({
   path: '/admin/reviews',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminSystemLogsRoute = AdminSystemLogsRouteImport.update({
+  id: '/admin/system-logs',
+  path: '/admin/system-logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
   id: '/orders/$orderId',
   path: '/orders/$orderId',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/system-logs': typeof AdminSystemLogsRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/orders/success': typeof OrdersSuccessRoute
   '/products/$slug': typeof ProductsSlugRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/system-logs': typeof AdminSystemLogsRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/orders/success': typeof OrdersSuccessRoute
   '/products/$slug': typeof ProductsSlugRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/system-logs': typeof AdminSystemLogsRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/orders/success': typeof OrdersSuccessRoute
   '/products/$slug': typeof ProductsSlugRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/admin/inventory'
     | '/admin/orders'
     | '/admin/reviews'
+    | '/admin/system-logs'
     | '/orders/$orderId'
     | '/orders/success'
     | '/products/$slug'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/admin/inventory'
     | '/admin/orders'
     | '/admin/reviews'
+    | '/admin/system-logs'
     | '/orders/$orderId'
     | '/orders/success'
     | '/products/$slug'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/admin/inventory'
     | '/admin/orders'
     | '/admin/reviews'
+    | '/admin/system-logs'
     | '/orders/$orderId'
     | '/orders/success'
     | '/products/$slug'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   AdminInventoryRoute: typeof AdminInventoryRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
+  AdminSystemLogsRoute: typeof AdminSystemLogsRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   OrdersSuccessRoute: typeof OrdersSuccessRoute
   ProductsSlugRoute: typeof ProductsSlugRoute
@@ -344,6 +357,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReviewsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/system-logs': {
+      id: '/admin/system-logs'
+      path: '/admin/system-logs'
+      fullPath: '/admin/system-logs'
+      preLoaderRoute: typeof AdminSystemLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/orders/$orderId': {
       id: '/orders/$orderId'
       path: '/orders/$orderId'
@@ -389,6 +409,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminInventoryRoute: AdminInventoryRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminReviewsRoute: AdminReviewsRoute,
+  AdminSystemLogsRoute: AdminSystemLogsRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,
   OrdersSuccessRoute: OrdersSuccessRoute,
   ProductsSlugRoute: ProductsSlugRoute,

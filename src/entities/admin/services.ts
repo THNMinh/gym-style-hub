@@ -18,6 +18,8 @@ import type {
   CreateVariantRequest,
   AdminOrderItem,
   ProductImageDto,
+  InventoryTransactionsResponse,
+  SystemLogsResponse,
 } from "./types";
 
 // ==========================================
@@ -473,4 +475,51 @@ export async function deleteProductImageApi(imageId: string): Promise<void> {
   return request<void>(`/api/products/images/${imageId}`, {
     method: "DELETE",
   });
+}
+
+// ==========================================
+// Inventory Transactions & Audit Logs API
+// ==========================================
+export async function getInventoryTransactionsApi(params?: {
+  variantId?: string;
+  sku?: string;
+  type?: string;
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<InventoryTransactionsResponse> {
+  const query = new URLSearchParams();
+  if (params?.variantId) query.set("variantId", params.variantId);
+  if (params?.sku) query.set("sku", params.sku);
+  if (params?.type) query.set("type", params.type);
+  if (params?.fromDate) query.set("fromDate", params.fromDate);
+  if (params?.toDate) query.set("toDate", params.toDate);
+  query.set("page", String(params?.page ?? 1));
+  query.set("pageSize", String(params?.pageSize ?? 10));
+
+  return request<InventoryTransactionsResponse>(
+    `/api/admin/inventory/transactions?${query.toString()}`
+  );
+}
+
+export async function getSystemLogsApi(params?: {
+  action?: string;
+  logLevel?: string;
+  userId?: string;
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<SystemLogsResponse> {
+  const query = new URLSearchParams();
+  if (params?.action) query.set("action", params.action);
+  if (params?.logLevel) query.set("logLevel", params.logLevel);
+  if (params?.userId) query.set("userId", params.userId);
+  if (params?.fromDate) query.set("fromDate", params.fromDate);
+  if (params?.toDate) query.set("toDate", params.toDate);
+  query.set("page", String(params?.page ?? 1));
+  query.set("pageSize", String(params?.pageSize ?? 10));
+
+  return request<SystemLogsResponse>(`/api/admin/system-logs?${query.toString()}`);
 }

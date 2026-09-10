@@ -25,6 +25,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { AdminPagination } from "./admin-pagination";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { InventoryTransactionsTab } from "./inventory-transactions-tab";
+import { History } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 // Zod Schemas for Restock and Adjust Stock Modals
@@ -115,120 +118,137 @@ export function InventoryFeature() {
         </Button>
       </div>
 
-      {/* Filter Cards */}
-      <Card className="border border-border/80 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Search className="size-4 text-muted-foreground" /> Bộ lọc tồn kho
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Lọc theo SKU (VD: GK-HOODIE)..."
-              value={skuFilter}
-              onChange={(e) => setSkuFilter(e.target.value)}
-              className="pl-9 text-xs"
-            />
-          </div>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Lọc theo Tên sản phẩm..."
-              value={nameFilter}
-              onChange={(e) => setNameFilter(e.target.value)}
-              className="pl-9 text-xs"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="stock" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="stock" className="flex items-center gap-2 font-bold text-xs">
+            <Package className="size-4" /> Bảng Tồn kho (OnHand/Available)
+          </TabsTrigger>
+          <TabsTrigger value="transactions" className="flex items-center gap-2 font-bold text-xs">
+            <History className="size-4" /> Nhật ký Biến động Kho
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Data Table */}
-      <Card className="border border-border/80 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-muted/50 border-b border-border text-xs uppercase font-bold text-muted-foreground">
-              <tr>
-                <th className="py-3.5 px-4">SKU</th>
-                <th className="py-3.5 px-4">Sản phẩm</th>
-                <th className="py-3.5 px-4">Biến thể</th>
-                <th className="py-3.5 px-4 text-center">Kho thực tế (OnHand)</th>
-                <th className="py-3.5 px-4 text-center">Đã giữ đơn (Reserved)</th>
-                <th className="py-3.5 px-4 text-center">Khả dụng (Available)</th>
-                <th className="py-3.5 px-4 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                    Đang tải dữ liệu tồn kho...
-                  </td>
-                </tr>
-              ) : !data?.items || data.items.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                    Không tìm thấy sản phẩm tồn kho nào khớp với bộ lọc.
-                  </td>
-                </tr>
-              ) : (
-                data.items.map((item) => (
-                  <tr key={item.variantId} className="hover:bg-muted/30 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-xs text-primary">
-                      {item.sku}
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold">{item.productName}</td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <Badge variant="outline" className="font-normal">
-                          {item.color}
-                        </Badge>
-                        <Badge variant="secondary" className="font-bold">
-                          {item.size}
-                        </Badge>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-bold">{item.quantityOnHand}</td>
-                    <td className="py-3.5 px-4 text-center font-medium text-amber-600">
-                      {item.quantityReserved}
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-extrabold text-emerald-600">
-                      {item.availableStock}
-                    </td>
-                    <td className="py-3.5 px-4 text-right space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleOpenRestock(item)}
-                        className="h-8 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                      >
-                        <Plus className="size-3.5 mr-1" /> Restock
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleOpenAdjust(item)}
-                        className="h-8 text-xs font-medium text-slate-600 hover:text-foreground"
-                      >
-                        <Edit3 className="size-3.5 mr-1" /> Sửa
-                      </Button>
-                    </td>
+        <TabsContent value="stock" className="space-y-6">
+          {/* Filter Cards */}
+          <Card className="border border-border/80 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Search className="size-4 text-muted-foreground" /> Bộ lọc tồn kho
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  placeholder="Lọc theo SKU (VD: GK-HOODIE)..."
+                  value={skuFilter}
+                  onChange={(e) => setSkuFilter(e.target.value)}
+                  className="pl-9 text-xs"
+                />
+              </div>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  placeholder="Lọc theo Tên sản phẩm..."
+                  value={nameFilter}
+                  onChange={(e) => setNameFilter(e.target.value)}
+                  className="pl-9 text-xs"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Data Table */}
+          <Card className="border border-border/80 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-muted/50 border-b border-border text-xs uppercase font-bold text-muted-foreground">
+                  <tr>
+                    <th className="py-3.5 px-4">SKU</th>
+                    <th className="py-3.5 px-4">Sản phẩm</th>
+                    <th className="py-3.5 px-4">Biến thể</th>
+                    <th className="py-3.5 px-4 text-center">Kho thực tế (OnHand)</th>
+                    <th className="py-3.5 px-4 text-center">Đã giữ đơn (Reserved)</th>
+                    <th className="py-3.5 px-4 text-center">Khả dụng (Available)</th>
+                    <th className="py-3.5 px-4 text-right">Thao tác</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                        Đang tải dữ liệu tồn kho...
+                      </td>
+                    </tr>
+                  ) : !data?.items || data.items.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                        Không tìm thấy sản phẩm tồn kho nào khớp với bộ lọc.
+                      </td>
+                    </tr>
+                  ) : (
+                    data.items.map((item) => (
+                      <tr key={item.variantId} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-xs text-primary">
+                          {item.sku}
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold">{item.productName}</td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Badge variant="outline" className="font-normal">
+                              {item.color}
+                            </Badge>
+                            <Badge variant="secondary" className="font-bold">
+                              {item.size}
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-bold">{item.quantityOnHand}</td>
+                        <td className="py-3.5 px-4 text-center font-medium text-amber-600">
+                          {item.quantityReserved}
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-extrabold text-emerald-600">
+                          {item.availableStock}
+                        </td>
+                        <td className="py-3.5 px-4 text-right space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenRestock(item)}
+                            className="h-8 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                          >
+                            <Plus className="size-3.5 mr-1" /> Restock
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOpenAdjust(item)}
+                            className="h-8 text-xs font-medium text-slate-600 hover:text-foreground"
+                          >
+                            <Edit3 className="size-3.5 mr-1" /> Sửa
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-        <AdminPagination
-          page={page}
-          pageSize={20}
-          totalCount={data?.totalCount || 0}
-          totalPages={data?.totalPages || 1}
-          onPageChange={setPage}
-        />
-      </Card>
+            <AdminPagination
+              page={page}
+              pageSize={20}
+              totalCount={data?.totalCount || 0}
+              totalPages={data?.totalPages || 1}
+              onPageChange={setPage}
+            />
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="transactions">
+          <InventoryTransactionsTab />
+        </TabsContent>
+      </Tabs>
 
       {/* Restock Modal */}
       <Dialog open={restockItem !== null} onOpenChange={(open) => !open && setRestockItem(null)}>

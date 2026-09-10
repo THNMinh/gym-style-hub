@@ -10,6 +10,7 @@ import {
   Dumbbell,
   Star,
   Ticket,
+  ShieldAlert,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ const navigation = [
   { name: "Quản lý Catalog & Sản phẩm", href: "/admin/catalog", icon: Layers },
   { name: "Kiểm duyệt Đánh giá", href: "/admin/reviews", icon: Star },
   { name: "Quản lý Mã Giảm Giá", href: "/admin/coupons", icon: Ticket },
+  { name: "Nhật ký System Logs", href: "/admin/system-logs", icon: ShieldAlert },
 ];
 
 export function AdminSidebar() {
