@@ -60,3 +60,21 @@ export interface RegisterResponse {
   role: UserRole | string;
   createdAt: string;
 }
+
+export interface VerifyEmailRequest {
+  email: string;
+  otpCode: string;
+}
+
+export interface ResendOtpRequest {
+  email: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}

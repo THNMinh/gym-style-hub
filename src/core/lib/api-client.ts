@@ -2,12 +2,19 @@ import { env, useMockData } from "@/core/config/env";
 import { useAuthStore } from "@/features/auth/store";
 
 export class ApiError extends Error {
+  public code?: string;
+  public data?: unknown;
+
   constructor(
     message: string,
     public status: number,
+    code?: string,
+    data?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
+    this.code = code;
+    this.data = data;
   }
 }
 
@@ -47,8 +54,26 @@ async function refreshTokens(): Promise<{ accessToken: string; refreshToken: str
       });
 
       if (!response.ok) {
+        const errJson = await response.json().catch(() => null);
+        const isTokenReuse =
+          errJson?.errors?.some((e: any) => e?.code === "Auth.TokenReuseDetected") ||
+          errJson?.error?.code === "Auth.TokenReuseDetected" ||
+          (typeof errJson?.detail === "string" && errJson.detail.includes("reuse"));
+
         useAuthStore.getState().logout();
-        throw new ApiError("Refresh token expired or invalid", response.status);
+
+        if (isTokenReuse) {
+          alert("⚠️ Cảnh báo: Phát hiện phiên đăng nhập không an toàn (Token Reuse Detected). Toàn bộ phiên làm việc đã bị thu hồi. Vui lòng đăng nhập lại!");
+          if (typeof window !== "undefined") {
+            window.location.href = "/auth";
+          }
+        }
+        throw new ApiError(
+          errJson?.errors?.[0]?.description || errJson?.detail || "Refresh token expired or invalid",
+          response.status,
+          isTokenReuse ? "Auth.TokenReuseDetected" : undefined,
+          errJson,
+        );
       }
 
       const resJson = await response.json();
@@ -109,13 +134,18 @@ export async function request<T>(
 
     const errJson = await response.json().catch(() => null);
     if (errJson && typeof errJson === "object") {
+      const errCode =
+        errJson.errors?.[0]?.code ||
+        errJson.error?.code ||
+        (typeof errJson.code === "string" ? errJson.code : undefined);
       const errMsg =
+        errJson.errors?.[0]?.description ||
         errJson.error?.message ||
         errJson.detail ||
         errJson.title ||
         (typeof errJson.error === "string" ? errJson.error : null);
       if (errMsg) {
-        throw new ApiError(errMsg, response.status);
+        throw new ApiError(errMsg, response.status, errCode, errJson);
       }
     }
 
@@ -134,13 +164,14 @@ export async function request<T>(
   if (typeof json === "object" && json !== null && "isSuccess" in json) {
     const envelope = json as ApiResult<T> & { value?: T };
     if (envelope.isSuccess === false) {
+      const errCode = typeof envelope.error === "object" ? envelope.error?.code : undefined;
       const errMsg =
         typeof envelope.error === "object" && envelope.error?.message
           ? envelope.error.message
           : typeof envelope.error === "string"
           ? envelope.error
           : "API Request Failed";
-      throw new ApiError(errMsg, response.status);
+      throw new ApiError(errMsg, response.status, errCode, envelope);
     }
     return (envelope.data !== undefined ? envelope.data : (envelope.value as T)) as T;
   }

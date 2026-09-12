@@ -7,6 +7,7 @@ import {
   updateAddressApi,
   setDefaultAddressApi,
   deleteAddressApi,
+  changePassword,
 } from "@/entities/identity/services";
 import type { UserAddress, CreateAddressPayload } from "@/entities/identity/types";
 import { ORDER_STATUS_LABEL, PAYMENT_METHOD_LABEL } from "@/entities/order/types";
@@ -37,6 +38,8 @@ import {
   Edit3,
   Trash2,
   Check,
+  Lock,
+  KeyRound,
 } from "lucide-react";
 import {
   Dialog,
@@ -103,6 +106,34 @@ export function AccountFeature() {
       queryClient.invalidateQueries({ queryKey: ["my-orders"] });
     },
     onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+  });
+
+  // Change Password State & Mutation
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentPassword) throw new Error("Vui lòng nhập mật khẩu hiện tại.");
+      if (newPassword.length < 8) throw new Error("Mật khẩu mới phải có ít nhất 8 ký tự.");
+      if (newPassword !== confirmNewPassword) throw new Error("Xác nhận mật khẩu mới chưa khớp.");
+      return changePassword({ currentPassword, newPassword });
+    },
+    onSuccess: () => {
+      toast.success("Đổi mật khẩu thành công!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    },
+    onError: (err: any) => {
+      const errCode = err?.code || err?.data?.errors?.[0]?.code;
+      if (errCode === "Auth.WrongPassword") {
+        toast.error("Mật khẩu hiện tại không chính xác.");
+      } else {
+        toast.error(err?.message || "Đổi mật khẩu thất bại.");
+      }
+    },
   });
 
   // Address CRUD Mutations
@@ -506,26 +537,106 @@ export function AccountFeature() {
           )}
         </TabsContent>
 
-        {/* Tab 3: Profile */}
-        <TabsContent value="profile" className="mt-6 space-y-4 text-xs border rounded-2xl p-6 bg-card shadow-sm max-w-xl">
-          <h3 className="text-base font-bold text-foreground pb-2 border-b border-border">Thông Tin Cá Nhân</h3>
-          <div className="space-y-3">
-            <p className="flex justify-between py-1 border-b border-border/40">
-              <span className="text-muted-foreground font-semibold">Họ và tên:</span>{" "}
-              <span className="font-bold text-foreground">{user.fullName ?? "—"}</span>
-            </p>
-            <p className="flex justify-between py-1 border-b border-border/40">
-              <span className="text-muted-foreground font-semibold">Email:</span>{" "}
-              <span className="font-bold text-foreground">{user.email}</span>
-            </p>
-            <p className="flex justify-between py-1 border-b border-border/40">
-              <span className="text-muted-foreground font-semibold">Số điện thoại:</span>{" "}
-              <span className="font-bold text-foreground">{user.phone ?? "—"}</span>
-            </p>
-            <p className="flex justify-between py-1">
-              <span className="text-muted-foreground font-semibold">Vai trò hệ thống:</span>{" "}
-              <Badge variant="outline">{user.role}</Badge>
-            </p>
+        {/* Tab 3: Profile & Security */}
+        <TabsContent value="profile" className="mt-6 space-y-6 text-xs max-w-xl">
+          <div className="border rounded-2xl p-6 bg-card shadow-sm space-y-4">
+            <h3 className="text-base font-bold text-foreground pb-2 border-b border-border">Thông Tin Cá Nhân</h3>
+            <div className="space-y-3">
+              <p className="flex justify-between py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-semibold">Họ và tên:</span>{" "}
+                <span className="font-bold text-foreground">{user.fullName ?? "—"}</span>
+              </p>
+              <p className="flex justify-between py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-semibold">Email:</span>{" "}
+                <span className="font-bold text-foreground">{user.email}</span>
+              </p>
+              <p className="flex justify-between py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-semibold">Số điện thoại:</span>{" "}
+                <span className="font-bold text-foreground">{user.phone ?? "—"}</span>
+              </p>
+              <p className="flex justify-between py-1">
+                <span className="text-muted-foreground font-semibold">Vai trò hệ thống:</span>{" "}
+                <Badge variant="outline">{user.role}</Badge>
+              </p>
+            </div>
+          </div>
+
+          <div className="border rounded-2xl p-6 bg-card shadow-sm space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-border">
+              <KeyRound className="size-4 text-primary" />
+              <h3 className="text-base font-bold text-foreground">Bảo Mật & Đổi Mật Khẩu</h3>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                changePasswordMutation.mutate();
+              }}
+              className="space-y-3.5"
+            >
+              <div className="space-y-1.5">
+                <Label htmlFor="curr-pass" className="text-xs font-semibold">
+                  Mật khẩu hiện tại <span className="text-rose-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <Input
+                    id="curr-pass"
+                    type="password"
+                    required
+                    placeholder="Nhập mật khẩu đang sử dụng"
+                    className="pl-8 text-xs font-medium"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="new-pass" className="text-xs font-semibold">
+                  Mật khẩu mới <span className="text-rose-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <Input
+                    id="new-pass"
+                    type="password"
+                    required
+                    minLength={8}
+                    placeholder="Tối thiểu 8 ký tự, gồm chữ hoa, thường và số"
+                    className="pl-8 text-xs font-medium"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="confirm-new-pass" className="text-xs font-semibold">
+                  Xác nhận mật khẩu mới <span className="text-rose-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <Input
+                    id="confirm-new-pass"
+                    type="password"
+                    required
+                    minLength={8}
+                    placeholder="Nhập lại mật khẩu mới để xác nhận"
+                    className="pl-8 text-xs font-medium"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={changePasswordMutation.isPending}
+                className="w-full text-xs font-bold mt-2"
+              >
+                {changePasswordMutation.isPending ? "Đang xử lý..." : "Cập Nhật Mật Khẩu"}
+              </Button>
+            </form>
           </div>
         </TabsContent>
       </Tabs>

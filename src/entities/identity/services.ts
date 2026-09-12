@@ -5,6 +5,10 @@ import type {
   LoginResponse,
   RegisterPayload,
   RegisterResponse,
+  VerifyEmailRequest,
+  ResendOtpRequest,
+  ForgotPasswordRequest,
+  ChangePasswordRequest,
   UserAddress,
   CreateAddressPayload,
   UpdateAddressPayload,
@@ -150,4 +154,56 @@ export async function deleteAddressApi(addressId: string): Promise<boolean> {
     }
   );
   return Boolean(res);
+}
+
+/**
+ * Xác thực địa chỉ email bằng mã OTP 6 chữ số (POST /api/auth/verify-email)
+ */
+export async function verifyEmail(payload: VerifyEmailRequest): Promise<LoginResponse> {
+  if (!useMockData) {
+    return request<LoginResponse>("/api/auth/verify-email", {
+      method: "POST",
+      body: payload,
+    });
+  }
+  return mock({ accessToken: "demo-access-token", refreshToken: "demo-refresh-token" }, 400);
+}
+
+/**
+ * Gửi lại mã OTP qua email (POST /api/auth/resend-otp)
+ */
+export async function resendOtp(payload: ResendOtpRequest): Promise<void> {
+  if (!useMockData) {
+    return request<void>("/api/auth/resend-otp", {
+      method: "POST",
+      body: payload,
+    });
+  }
+  return mock(undefined, 400);
+}
+
+/**
+ * Cấp lại mật khẩu tạm qua email khi quên (POST /api/auth/forgot-password)
+ */
+export async function forgotPassword(payload: ForgotPasswordRequest): Promise<void> {
+  if (!useMockData) {
+    return request<void>("/api/auth/forgot-password", {
+      method: "POST",
+      body: payload,
+    });
+  }
+  return mock(undefined, 400);
+}
+
+/**
+ * Đổi mật khẩu tài khoản người dùng (POST /api/auth/change-password) [Authorize]
+ */
+export async function changePassword(payload: ChangePasswordRequest): Promise<void> {
+  if (!useMockData) {
+    return request<void>("/api/auth/change-password", {
+      method: "POST",
+      body: payload,
+    });
+  }
+  return mock(undefined, 400);
 }
