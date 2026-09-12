@@ -11,10 +11,12 @@ import {
   AlertCircle,
   FileText,
   Star,
+  Calendar,
+  User,
 } from "lucide-react";
 import { getOrderByIdApi, getOrderTrackingApi, cancelMyOrderApi } from "@/entities/order/services";
 import { ORDER_STATUS_LABEL, PAYMENT_METHOD_LABEL } from "@/entities/order/types";
-import { formatDate, formatPrice } from "@/shared/lib/format";
+import { formatDate, formatDateTime, formatPrice } from "@/shared/lib/format";
 import {
   Dialog,
   DialogContent,
@@ -111,25 +113,58 @@ export function OrderTrackingModal({ orderId, open, onClose }: OrderTrackingModa
           ) : (
             <div className="space-y-6 py-2">
               {/* Header Summary Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-muted/30 text-xs border">
-                <div>
-                  <span className="text-muted-foreground">Trạng thái:</span>
-                  <p className="font-bold text-primary mt-0.5">
-                    {ORDER_STATUS_LABEL[order.currentStatus] || order.currentStatus}
-                  </p>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-lg bg-muted/30 text-xs border">
+                  <div>
+                    <span className="text-muted-foreground font-medium">Trạng thái đơn:</span>
+                    <p className="font-bold text-primary mt-0.5">
+                      {ORDER_STATUS_LABEL[order.currentStatus] || order.currentStatus}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-medium">Phương thức:</span>
+                    <p className="font-semibold mt-0.5">{PAYMENT_METHOD_LABEL[order.paymentMethod] || order.paymentMethod}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-medium">Trạng thái tiền:</span>
+                    <p className="font-bold mt-0.5 text-emerald-600">{order.paymentStatus === "Paid" ? "Đã thanh toán" : "Chưa thanh toán"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-medium">Tổng thanh toán:</span>
+                    <p className="font-extrabold text-foreground mt-0.5 text-sm">{formatPrice(order.totalAmount)}</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Thanh toán:</span>
-                  <p className="font-semibold mt-0.5">{PAYMENT_METHOD_LABEL[order.paymentMethod] || order.paymentMethod}</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 text-xs border">
+                  <div className="flex items-start gap-2">
+                    <Calendar className="size-4 text-purple-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-muted-foreground font-medium">Ngày giờ đặt hàng:</span>
+                      <p className="font-bold text-foreground mt-0.5 font-mono">
+                        {formatDateTime(order.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <User className="size-4 text-blue-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-muted-foreground font-medium">Khách hàng đặt mua:</span>
+                      <p className="font-bold text-foreground mt-0.5">
+                        {order.userEmail || "Khách hàng"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Trạng thái tiền:</span>
-                  <p className="font-bold mt-0.5 text-emerald-600">{order.paymentStatus === "Paid" ? "Đã thanh toán" : "Chưa thanh toán"}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Tổng giá trị:</span>
-                  <p className="font-extrabold text-foreground mt-0.5">{formatPrice(order.totalAmount)}</p>
-                </div>
+
+                {order.shippingAddress && (
+                  <div className="p-3.5 rounded-lg bg-muted/20 text-xs border flex items-start gap-2">
+                    <MapPin className="size-4 text-rose-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-muted-foreground font-medium">Địa chỉ nhận hàng:</span>
+                      <p className="font-medium text-foreground mt-0.5 leading-relaxed">{order.shippingAddress}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Shopee Style Tracking Timeline */}

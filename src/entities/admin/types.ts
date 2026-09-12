@@ -3,6 +3,7 @@ export interface InventoryItem {
   sku: string;
   productName: string;
   color: string;
+  colorHex?: string | null;
   size: string;
   quantityOnHand: number;
   quantityReserved: number;
@@ -243,4 +244,17 @@ export interface ProductImageDto {
   imageUrl: string;
   displayOrder: number;
   isPrimary: boolean;
+}
+
+export interface SystemLogDetailDto {
+  logId: string;
+  userId: string | null;
+  userEmail: string | null;
+  action: string;
+  message: string;
+  logLevel: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

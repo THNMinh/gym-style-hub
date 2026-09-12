@@ -20,6 +20,7 @@ import type {
   ProductImageDto,
   InventoryTransactionsResponse,
   SystemLogsResponse,
+  SystemLogDetailDto,
 } from "./types";
 
 // ==========================================
@@ -522,4 +523,8 @@ export async function getSystemLogsApi(params?: {
   query.set("pageSize", String(params?.pageSize ?? 10));
 
   return request<SystemLogsResponse>(`/api/admin/system-logs?${query.toString()}`);
+}
+
+export async function getSystemLogByIdApi(logId: string): Promise<SystemLogDetailDto> {
+  return request<SystemLogDetailDto>(`/api/admin/system-logs/${logId}`);
 }

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, RefreshCw, Filter, RotateCcw, Calendar, ShieldAlert, Globe, Info, AlertTriangle, UserCheck, ChevronRight } from "lucide-react";
-import { getSystemLogsApi } from "@/entities/admin/services";
+import { getSystemLogsApi, getSystemLogByIdApi } from "@/entities/admin/services";
 import type { SystemLogDto } from "@/entities/admin/types";
+import { formatDateTime } from "@/shared/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,16 @@ export function SystemLogsFeature() {
 
   // Selected Log Detail Modal
   const [selectedLog, setSelectedLog] = useState<SystemLogDto | null>(null);
+  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
+
+  // Fetch Full Log Detail with userEmail from GetById API
+  const logDetailQuery = useQuery({
+    queryKey: ["admin-system-log-detail", selectedLogId],
+    queryFn: () => (selectedLogId ? getSystemLogByIdApi(selectedLogId) : Promise.resolve(null)),
+    enabled: !!selectedLogId,
+  });
+
+  const logDetail = logDetailQuery.data || selectedLog;
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-system-logs", actionFilter, logLevelFilter, fromDate, toDate, page],
@@ -247,7 +258,10 @@ export function SystemLogsFeature() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setSelectedLog(log)}
+                          onClick={() => {
+                            setSelectedLog(log);
+                            setSelectedLogId(log.logId);
+                          }}
                           className="h-7 px-2 text-xs text-primary hover:text-primary/80"
                         >
                           Xem <ChevronRight className="size-3 ml-0.5" />
@@ -271,39 +285,57 @@ export function SystemLogsFeature() {
       </Card>
 
       {/* Log Detail Dialog */}
-      <Dialog open={selectedLog !== null} onOpenChange={(open) => !open && setSelectedLog(null)}>
+      <Dialog
+        open={selectedLog !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedLog(null);
+            setSelectedLogId(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              <LogLevelBadge level={selectedLog?.logLevel || "Info"} />
-              <span>Chi tiết System Log: {selectedLog?.action}</span>
+              <LogLevelBadge level={logDetail?.logLevel || "Info"} />
+              <span>Chi tiết System Audit Log: {logDetail?.action}</span>
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Mã Log ID: <code className="font-mono text-foreground">{selectedLog?.logId}</code>
+              Mã Log ID: <code className="font-mono text-foreground">{logDetail?.logId}</code>
             </DialogDescription>
           </DialogHeader>
 
-          {selectedLog && (
+          {logDetailQuery.isLoading ? (
+            <div className="py-8 text-center text-xs text-muted-foreground">Đang tải thông tin chi tiết nhật ký...</div>
+          ) : logDetail ? (
             <div className="space-y-4 py-2 text-xs">
               <div className="rounded-md bg-muted p-4 space-y-2">
                 <p className="font-bold text-foreground">Nội dung Diễn giải (Message):</p>
                 <p className="font-mono text-sm leading-relaxed text-foreground bg-background p-3 rounded border border-border whitespace-pre-wrap">
-                  {selectedLog.message}
+                  {logDetail.message}
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 border-t border-border pt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border pt-3">
                 <div>
-                  <p className="text-muted-foreground font-semibold">User ID thực hiện:</p>
-                  <p className="font-mono text-foreground font-medium flex items-center gap-1.5 mt-0.5">
-                    <UserCheck className="size-3.5 text-primary" />
-                    {selectedLog.userId || "Background Worker / System Job"}
+                  <p className="text-muted-foreground font-semibold">Tài khoản thực hiện (Email):</p>
+                  <p className="font-bold text-primary flex items-center gap-1.5 mt-0.5 text-sm">
+                    <UserCheck className="size-4 text-emerald-500 shrink-0" />
+                    {"userEmail" in logDetail && logDetail.userEmail ? logDetail.userEmail : "Hệ thống (System Job / Guest)"}
                   </p>
+                  {logDetail.userId && (
+                    <p className="font-mono text-[11px] text-muted-foreground mt-1">
+                      User ID: {logDetail.userId}
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <p className="text-muted-foreground font-semibold">Thời điểm phát sinh (UTC):</p>
-                  <p className="font-medium text-foreground mt-0.5">
-                    {new Date(selectedLog.createdAt).toISOString()}
+                  <p className="text-muted-foreground font-semibold">Thời điểm phát sinh:</p>
+                  <p className="font-bold text-foreground font-mono mt-0.5 text-sm">
+                    {formatDateTime(logDetail.createdAt)}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                    ISO: {new Date(logDetail.createdAt).toISOString()}
                   </p>
                 </div>
               </div>
@@ -311,12 +343,12 @@ export function SystemLogsFeature() {
               <div className="space-y-1.5 border-t border-border pt-3">
                 <p className="text-muted-foreground font-semibold">Client IP & User Agent:</p>
                 <div className="space-y-1 bg-muted/50 p-2.5 rounded font-mono text-[11px] text-foreground">
-                  <p><strong>IP Address:</strong> {selectedLog.ipAddress || "::1"}</p>
-                  <p className="break-all"><strong>User-Agent:</strong> {selectedLog.userAgent || "N/A"}</p>
+                  <p><strong>IP Address:</strong> {logDetail.ipAddress || "::1"}</p>
+                  <p className="break-all"><strong>User-Agent:</strong> {logDetail.userAgent || "N/A"}</p>
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>

@@ -195,8 +195,15 @@ export function InventoryFeature() {
                         <td className="py-3.5 px-4 font-semibold">{item.productName}</td>
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-1.5 text-xs">
-                            <Badge variant="outline" className="font-normal">
-                              {item.color}
+                            <Badge variant="outline" className="font-normal flex items-center gap-1.5 px-2 py-0.5">
+                              {item.colorHex && (
+                                <span
+                                  className="size-3 rounded-full border border-black/20 shrink-0 shadow-xs"
+                                  style={{ backgroundColor: item.colorHex }}
+                                  title={`Mã màu: ${item.colorHex}`}
+                                />
+                              )}
+                              <span>{item.color}</span>
                             </Badge>
                             <Badge variant="secondary" className="font-bold">
                               {item.size}

@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
+import { AdminReturnBar } from "@/components/layout/admin-return-bar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Toaster } from "@/components/ui/sonner";
@@ -126,6 +127,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {!isAdminPath && <AdminReturnBar />}
       {!isAdminPath && <AnnouncementBar />}
       {!isAdminPath && <SiteHeader />}
       <main>

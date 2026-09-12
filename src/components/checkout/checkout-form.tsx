@@ -45,6 +45,13 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
     enabled: !!user,
   });
 
+  // Cleanup sticky payment toast on unmount
+  useEffect(() => {
+    return () => {
+      toast.dismiss("payment-redirect-toast");
+    };
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -154,7 +161,10 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
 
       // Handle Payment Redirect if paymentUrl exists (VNPAY / MOMO)
       if (data.paymentUrl) {
-        toast.loading("Đang chuyển hướng sang cổng thanh toán...");
+        toast.loading("Đang chuyển hướng sang cổng thanh toán...", {
+          id: "payment-redirect-toast",
+          duration: 8000,
+        });
         clearCart();
         window.location.href = data.paymentUrl;
         return;

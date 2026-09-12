@@ -63,6 +63,7 @@ export interface OrderDetailDto {
   orderId: string;
   orderCode: string;
   userId: string;
+  userEmail?: string | null;
   shippingAddress: string;
   subtotal: number;
   shippingFee: number;

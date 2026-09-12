@@ -72,6 +72,8 @@ type BackendProductDetail = {
     isPrimary: boolean;
   }[];
   variants?: BackendProductVariantItem[];
+  averageRating?: number;
+  reviewCount?: number;
 };
 
 function toGender(value: string): "Men" | "Women" | "Unisex" {
@@ -203,8 +205,8 @@ function mapDetailToProduct(
     variants,
     images: detail.images || [],
     sizeGuide: [],
-    ratingAverage: 0,
-    reviewCount: 0,
+    ratingAverage: detail.averageRating ?? 0,
+    reviewCount: detail.reviewCount ?? 0,
     badges: [],
   };
 }

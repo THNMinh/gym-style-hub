@@ -16,11 +16,14 @@ Tài liệu được phân loại rõ ràng thành **Nhóm Admin (Quản trị h
    - [2.5. Quản lý Sản phẩm (`/api/products`)](#25-quản-lý-sản-phẩm-apiproducts)
    - [2.6. Quản lý Biến thể Sản phẩm (`/api/products/variants`)](#26-quản-lý-biến-thể-sản-phẩm-apiproductsvariants)
    - [2.7. Quản lý Hình ảnh Sản phẩm (`/api/products/images`)](#27-quản-lý-hình-ảnh-sản-phẩm-apiproductsimages)
+   - [2.8. Nhật ký Biến động Kho (`/api/admin/inventory/transactions`)](#28-nhật-ký-biến-động-kho-apiadmininventorytransactions)
+   - [2.9. Nhật ký Thao tác Hệ thống (`/api/admin/system-logs`)](#29-nhật-ký-thao-tác-hệ-thống-apiadminsystem-logs)
 3. [DANH SÁCH API KHÁCH HÀNG & CÔNG KHAI (CLIENT PORTAL)](#3-danh-sách-api-khách-hàng--công-khai-client-portal)
    - [3.1. Xác thực & Tài khoản (`/api/auth`)](#31-xác-thực--tài-khoản-apiauth)
    - [3.2. Đặt hàng & Thanh toán (`/api/checkout`)](#32-đặt-hàng--thanh-toán-apicheckout)
    - [3.3. Xử lý Cổng thanh toán & Webhook IPN (`/api/payment`)](#33-xử-lý-cổng-thanh-toán--webhook-ipn-apipayment)
    - [3.4. Danh sách Yêu thích (`/api/wishlists`)](#34-danh-sách-yêu-thích-apiwishlists)
+   - [3.5. Chuông Thông báo & SignalR Real-Time (`/api/notifications` & `/hubs/notification`)](#35-chuông-thông-báo--signalr-real-time-apinotifications--hubsnotification)
 4. [Hướng dẫn dành riêng cho Frontend Admin UI](#4-hướng-dẫn-dành-riêng-cho-frontend-admin-ui)
 
 ---
@@ -333,6 +336,104 @@ Một sản phẩm có thể có nhiều biến thể (Màu sắc, Size, Giá ti
 
 ---
 
+### 2.8. Nhật ký Biến động Kho (`/api/admin/inventory/transactions`)
+
+*(Chỉ dành cho Admin có Bearer Token)*
+
+#### ➔ `GET /api/admin/inventory/transactions`
+* **Tác dụng**: Lấy danh sách lịch sử biến động kho (nhập kho, xuất kho bán hàng, giữ kho đơn hàng, hoàn giữ kho khi hủy, điều chỉnh kiểm kê).
+* **Query Parameters**:
+  * `variantId` (`Guid`, Optional): Lọc theo ID biến thể sản phẩm.
+  * `sku` (`string`, Optional): Lọc theo mã SKU biến thể (hỗ trợ tìm kiếm gần đúng/contains).
+  * `type` (`string`, Optional): Lọc theo loại biến động (`Import`, `Export`, `Reserve`, `Adjust`).
+  * `fromDate` (`DateTime`, Optional): Lọc từ thời điểm (UTC).
+  * `toDate` (`DateTime`, Optional): Lọc đến thời điểm (UTC).
+  * `page` (`int`, Optional, Default: `1`): Trang hiện tại.
+  * `pageSize` (`int`, Optional, Default: `10`): Số dòng trên một trang.
+* **Response thành công (`200 OK`)**:
+  ```json
+  {
+    "isSuccess": true,
+    "value": {
+      "transactions": [
+        {
+          "transactionId": "d6a7c3b2-9f1e-4c8d-8a21-4b5c7d8e9f01",
+          "variantId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+          "sku": "GK-LEGGING-BLK-M",
+          "productName": "Quần Legging Gym Nữ Co Giãn Pro",
+          "colorName": "Black",
+          "size": "M",
+          "quantityChange": 50,
+          "type": "Import",
+          "referenceId": "Restock batch 2026-Q3 | By: admin@gymkitten.com",
+          "performer": "admin@gymkitten.com",
+          "createdAt": "2026-09-10T08:30:00Z"
+        },
+        {
+          "transactionId": "e7b8c4d3-0a2f-5d9e-9b32-5c6d8e9f0a12",
+          "variantId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+          "sku": "GK-LEGGING-BLK-M",
+          "productName": "Quần Legging Gym Nữ Co Giãn Pro",
+          "colorName": "Black",
+          "size": "M",
+          "quantityChange": -1,
+          "type": "Export",
+          "referenceId": "Order #GK-ORD-001 | Admin: admin@gymkitten.com",
+          "performer": "admin@gymkitten.com",
+          "createdAt": "2026-09-10T09:15:00Z"
+        }
+      ],
+      "totalCount": 2,
+      "page": 1,
+      "pageSize": 10,
+      "totalPages": 1
+    }
+  }
+  ```
+
+---
+
+### 2.9. Nhật ký Thao tác Hệ thống (`/api/admin/system-logs`)
+
+*(Chỉ dành cho Admin có Bearer Token)*
+
+#### ➔ `GET /api/admin/system-logs`
+* **Tác dụng**: Truy vấn vết kiểm toán (Audit Logs) các thao tác quản trị và hệ thống (đổi trạng thái đơn hàng, xuất nhập kho, điều chỉnh kho, tạo/xóa coupon, v.v.) kèm thông tin IP Client và User-Agent trình duyệt.
+* **Query Parameters**:
+  * `action` (`string`, Optional): Lọc theo hành động (VD: `UpdateOrderStatus`, `RestockInventory`, `AdjustStock`, `ShipOrder`, `CreateCoupon`, `AutoCancelOrder`).
+  * `logLevel` (`string`, Optional): Lọc theo mức log (`Information`, `Warning`, `Error`).
+  * `userId` (`Guid`, Optional): Lọc theo ID người thực hiện.
+  * `fromDate` (`DateTime`, Optional): Lọc từ ngày giờ (UTC).
+  * `toDate` (`DateTime`, Optional): Lọc đến ngày giờ (UTC).
+  * `page` (`int`, Optional, Default: `1`): Trang hiện tại.
+  * `pageSize` (`int`, Optional, Default: `10`): Số dòng trên một trang.
+* **Response thành công (`200 OK`)**:
+  ```json
+  {
+    "isSuccess": true,
+    "value": {
+      "logs": [
+        {
+          "logId": "7c8e9f0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a",
+          "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "action": "UpdateOrderStatus",
+          "message": "Admin admin@gymkitten.com updated Order GK-ORD-001 from 'Processing' to 'Shipped'.",
+          "logLevel": "Information",
+          "ipAddress": "192.168.1.100",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0",
+          "createdAt": "2026-09-10T09:15:00Z"
+        }
+      ],
+      "totalCount": 1,
+      "page": 1,
+      "pageSize": 10,
+      "totalPages": 1
+    }
+  }
+  ```
+
+---
+
 ## 3. DANH SÁCH API KHÁCH HÀNG & CÔNG KHAI (CLIENT PORTAL)
 
 ### 3.1. Xác thực & Tài khoản (`/api/auth`)
@@ -448,6 +549,89 @@ Cổng thanh toán tự động tương tác với các endpoint này:
 
 ---
 
+### 3.5. Chuông Thông báo & SignalR Real-Time (`/api/notifications` & `/hubs/notification`)
+
+*(Tất cả API yêu cầu đăng nhập `[Authorize]`)*
+
+#### ➔ `GET /api/notifications`
+* **Tác dụng**: Lấy danh sách thông báo của tôi (kèm tổng số thông báo chưa đọc `unreadCount`).
+* **Query Parameters**:
+  * `page` (`int`, Optional, Default: `1`): Trang hiện tại.
+  * `pageSize` (`int`, Optional, Default: `10`): Số lượng thông báo trên trang.
+* **Response thành công (`200 OK`)**:
+  ```json
+  {
+    "isSuccess": true,
+    "value": {
+      "notifications": [
+        {
+          "notificationId": "b1f81df6-4b2a-4318-87ff-43fbfd290b20",
+          "title": "Cập nhật đơn hàng #GK-ORD-001",
+          "content": "Đơn hàng #GK-ORD-001 của bạn đã đổi trạng thái thành: Shipped",
+          "type": "Order",
+          "isRead": false,
+          "targetUrl": "/orders/3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "readAt": null,
+          "createdAt": "2026-09-04T12:40:00Z"
+        }
+      ],
+      "unreadCount": 1,
+      "totalCount": 1,
+      "page": 1,
+      "pageSize": 10
+    }
+  }
+  ```
+
+#### ➔ `PUT /api/notifications/{id}/read`
+* **Tác dụng**: Đánh dấu 1 thông báo cụ thể là đã đọc (`isRead = true`, gán `readAt = UTC`).
+* **URL Parameter**:
+  * `id` (`Guid` - Required): ID của thông báo cần đánh dấu đã đọc.
+* **Response thành công (`200 OK`)**:
+  ```json
+  {
+    "isSuccess": true,
+    "value": null
+  }
+  ```
+
+#### ➔ `PUT /api/notifications/read-all`
+* **Tác dụng**: Đánh dấu tất cả thông báo của người dùng là đã đọc.
+* **Response thành công (`200 OK`)**:
+  ```json
+  {
+    "isSuccess": true,
+    "value": null
+  }
+  ```
+
+#### 📡 Hướng Dẫn Tích Hợp WebSocket Real-Time (SignalR Client)
+Frontend sử dụng thư viện `@microsoft/signalr` để nhận thông báo tức thời (quả chuông nảy số):
+
+```javascript
+import * as signalR from "@microsoft/signalr";
+
+const connection = new signalR.HubConnectionBuilder()
+  .withUrl("https://localhost:7191/hubs/notification", {
+    accessTokenFactory: () => localStorage.getItem("access_token")
+  })
+  .withAutomaticReconnect()
+  .build();
+
+// Lắng nghe sự kiện đẩy thông báo từ Server
+connection.on("ReceiveNotification", (notification) => {
+  console.log("🔔 Nhận thông báo mới:", notification);
+  // Cập nhật State React / Vue:
+  // 1. unreadCount = unreadCount + 1
+  // 2. Thêm notification vào đầu danh sách thông báo
+  // 3. Hiển thị Toast / Popup thông báo
+});
+
+await connection.start();
+```
+
+---
+
 ## 4. Hướng dẫn dành riêng cho Frontend Admin UI
 
 Để xây dựng một trang **Admin Dashboard** hoàn chỉnh cho GymKitten, Frontend Dev có thể thiết kế các màn hình tương ứng với các nhóm API sau:
@@ -475,3 +659,15 @@ Cổng thanh toán tự động tương tác với các endpoint này:
 * **Products**: Quản lý thông tin chung (Tên, Slug, Giới tính `Men/Women`, Form dáng `Slim/Regular`, Bật/Tắt hiển thị `isActive`).
 * **Variants**: Thêm biến thể Màu + Size + SKU + Giá niêm yết + Giá khuyến mãi cho từng sản phẩm.
 * **Images**: Upload ảnh theo từng biến thể màu hoặc ảnh chung của sản phẩm qua `multipart/form-data`.
+
+### 5️⃣ Màn hình Nhật ký Biến động Kho (Inventory Audit Log)
+* **API**: `GET /api/admin/inventory/transactions`.
+* **Giao diện khuyên dùng**:
+  * Bộ lọc: Tìm theo SKU, chọn loại biến động (`Import`, `Export`, `Reserve`, `Adjust`), chọn khoảng ngày (`fromDate`, `toDate`).
+  * Bảng dữ liệu: Cột Ngày giờ, Mã SKU, Tên SP & Biến thể (Màu/Size), Loại biến động (Badge màu sắc: Xanh lá cho `Import`, Đỏ cam cho `Export`, Vàng cho `Reserve`, Xanh dương cho `Adjust`), Số lượng thay đổi (+/-), Ghi chú / Người thực hiện (`performer`).
+
+### 6️⃣ Màn hình Nhật ký Hệ thống (System Audit Logs)
+* **API**: `GET /api/admin/system-logs`.
+* **Giao diện khuyên dùng**:
+  * Bộ lọc: Action dropdown, Log Level badge (`Information`, `Warning`, `Error`), Khoảng ngày.
+  * Bảng dữ liệu: Timestamp, Cột Hành động (`Action`), Nội dung chi tiết (`Message`), Phân loại (`LogLevel`), Địa chỉ IP & Thiết bị (`UserAgent`).
