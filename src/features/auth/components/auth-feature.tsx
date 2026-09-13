@@ -13,6 +13,7 @@ import { parseUserFromToken } from "@/entities/identity/jwt";
 import { useAuthStore } from "../store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   InputOTP,
@@ -291,10 +292,9 @@ export function AuthFeature() {
                 )}
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground z-10 pointer-events-none" />
+                <PasswordInput
                   id="password"
-                  type="password"
                   required
                   minLength={8}
                   placeholder="Tối thiểu 8 ký tự"
@@ -312,10 +312,9 @@ export function AuthFeature() {
                   Nhập lại mật khẩu <span className="text-rose-500">*</span>
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground z-10 pointer-events-none" />
+                  <PasswordInput
                     id="confirmPassword"
-                    type="password"
                     required
                     minLength={8}
                     placeholder="Nhập lại mật khẩu để xác nhận"

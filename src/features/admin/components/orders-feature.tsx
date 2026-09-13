@@ -294,24 +294,40 @@ export function OrdersFeature() {
                             >
                               <Eye className="size-3.5 mr-1" /> Chi tiết đơn
                             </Button>
+                            {order.currentStatus?.toLowerCase() !== "cancelled" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenUpdateModal(order)}
+                                className="h-8 px-2.5 text-xs font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              >
+                                <Edit3 className="size-3.5 mr-1" /> Cập nhật
+                              </Button>
+                            )}
+                          </div>
+                          {order.currentStatus?.toLowerCase() === "cancelled" ? (
+                            <span className="text-[11px] font-bold text-destructive/80 italic bg-destructive/10 px-2.5 py-1 rounded-md">
+                              Đã hủy bởi khách
+                            </span>
+                          ) : order.currentStatus?.toLowerCase() === "shipped" ? (
+                            <span className="text-[11px] font-bold text-purple-600 bg-purple-50 dark:bg-purple-950/30 px-2 py-1 rounded-md flex items-center justify-center gap-1">
+                              <CheckCircle2 className="size-3" /> Đã xuất kho
+                            </span>
+                          ) : order.currentStatus?.toLowerCase() === "delivered" || order.currentStatus?.toLowerCase() === "completed" ? (
+                            <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded-md flex items-center justify-center gap-1">
+                              <CheckCircle2 className="size-3" /> Đã hoàn tất
+                            </span>
+                          ) : (
                             <Button
                               size="sm"
-                              variant="outline"
-                              onClick={() => handleOpenUpdateModal(order)}
-                              className="h-8 px-2.5 text-xs font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              disabled={shipMutation.isPending}
+                              onClick={() => shipMutation.mutate(order.orderId)}
+                              className="h-8 px-2.5 w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white justify-center gap-1 shadow-xs"
+                              title="Xuất kho giao hàng ngay"
                             >
-                              <Edit3 className="size-3.5 mr-1" /> Cập nhật
+                              <Truck className="size-3.5" /> Ship Đơn
                             </Button>
-                          </div>
-                          <Button
-                            size="sm"
-                            disabled={shipMutation.isPending}
-                            onClick={() => shipMutation.mutate(order.orderId)}
-                            className="h-8 px-2.5 w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white justify-center gap-1 shadow-xs"
-                            title="Xuất kho giao hàng ngay"
-                          >
-                            <Truck className="size-3.5" /> Ship Đơn
-                          </Button>
+                          )}
                         </div>
                       </td>
                     </tr>

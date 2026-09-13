@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/features/auth/store";
 import { useHydrated } from "@/shared/hooks/use-hydrated";
@@ -307,6 +308,8 @@ export function AccountFeature() {
                   order.currentStatus?.toLowerCase() === "delivered" ||
                   order.currentStatus?.toLowerCase() === "completed";
                 const isPending = order.currentStatus?.toLowerCase() === "pending";
+                const isProcessing = order.currentStatus?.toLowerCase() === "processing";
+                const canCancel = isPending || isProcessing;
 
                 return (
                   <div
@@ -401,7 +404,7 @@ export function AccountFeature() {
                           </Button>
                         )}
 
-                        {isPending && (
+                        {canCancel && (
                           <Button
                             size="sm"
                             variant="destructive"
@@ -578,10 +581,9 @@ export function AccountFeature() {
                   Mật khẩu hiện tại <span className="text-rose-500">*</span>
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                  <Input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground z-10 pointer-events-none" />
+                  <PasswordInput
                     id="curr-pass"
-                    type="password"
                     required
                     placeholder="Nhập mật khẩu đang sử dụng"
                     className="pl-8 text-xs font-medium"
@@ -596,10 +598,9 @@ export function AccountFeature() {
                   Mật khẩu mới <span className="text-rose-500">*</span>
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                  <Input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground z-10 pointer-events-none" />
+                  <PasswordInput
                     id="new-pass"
-                    type="password"
                     required
                     minLength={8}
                     placeholder="Tối thiểu 8 ký tự, gồm chữ hoa, thường và số"
@@ -615,10 +616,9 @@ export function AccountFeature() {
                   Xác nhận mật khẩu mới <span className="text-rose-500">*</span>
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                  <Input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground z-10 pointer-events-none" />
+                  <PasswordInput
                     id="confirm-new-pass"
-                    type="password"
                     required
                     minLength={8}
                     placeholder="Nhập lại mật khẩu mới để xác nhận"

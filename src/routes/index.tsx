@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { HomeHero } from "@/features/home/components/home-hero";
 import { CategoryStrip } from "@/features/home/components/category-strip";
+import { OnyxPromo } from "@/features/home/components/onyx-promo";
 import { ProductRail } from "@/features/home/components/product-rail";
 import { ValueProps } from "@/features/home/components/value-props";
 
@@ -23,6 +24,7 @@ function Index() {
     <>
       <HomeHero />
       <CategoryStrip />
+      <OnyxPromo />
       <ProductRail title="Bán chạy nhất" sort="rating" />
       <ValueProps />
       <ProductRail title="Hàng mới về" sort="newest" />
