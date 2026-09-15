@@ -10,7 +10,7 @@ export const checkoutSchema = z.object({
   ward: z.string().optional(),
   district: z.string().optional(),
   city: z.string().optional(),
-  paymentMethod: z.enum(["COD", "VNPAY", "MOMO"], {
+  paymentMethod: z.enum(["COD", "MOMO"], {
     required_error: "Vui lòng chọn phương thức thanh toán",
   }),
   customerNote: z.string().max(500, "Ghi chú không quá 500 ký tự").optional(),
@@ -26,7 +26,7 @@ export interface CheckoutItemRequest {
 export interface CheckoutRequest {
   items: CheckoutItemRequest[];
   shippingAddress: string;
-  paymentMethod: "COD" | "VNPAY" | "MOMO";
+  paymentMethod: "COD" | "MOMO";
   customerNote?: string;
 }
 

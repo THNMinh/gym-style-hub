@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, X } from "lucide-react";
-import { PRODUCT_SORTS, type Gender, type ProductSort } from "@/entities/catalog/types";
+import { type Gender, type ProductSort } from "@/entities/catalog/types";
 import {
   getAllColors,
   getAllFitTypes,
@@ -264,28 +264,6 @@ export function CatalogFilterBar({
             })}
           </div>
         </FilterDropdown>
-
-        <div className="ml-auto">
-          <FilterDropdown
-            label={`Sắp xếp: ${PRODUCT_SORTS.find((s) => s.value === filters.sort)?.label ?? ""}`}
-          >
-            <div className="flex flex-col">
-              {PRODUCT_SORTS.map((sort) => (
-                <button
-                  key={sort.value}
-                  type="button"
-                  onClick={() => onChange({ sort: sort.value })}
-                  className={cn(
-                    "py-2 text-left text-sm",
-                    filters.sort === sort.value ? "font-bold" : "text-muted-foreground",
-                  )}
-                >
-                  {sort.label}
-                </button>
-              ))}
-            </div>
-          </FilterDropdown>
-        </div>
       </div>
 
       {chips.length ? (

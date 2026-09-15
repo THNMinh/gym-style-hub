@@ -42,7 +42,6 @@ export function FinanceFeature() {
             <div className="flex gap-1.5">
               {[
                 { label: "Tất cả", value: "" },
-                { label: "VnPay", value: "VnPay" },
                 { label: "MoMo", value: "MoMo" },
                 { label: "COD", value: "COD" },
               ].map((item) => (

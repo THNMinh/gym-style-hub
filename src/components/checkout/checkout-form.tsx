@@ -360,8 +360,8 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
         <CardContent className="space-y-4">
           <RadioGroup
             value={selectedPaymentMethod}
-            onValueChange={(val) => setValue("paymentMethod", val as "COD" | "VNPAY" | "MOMO")}
-            className="grid gap-3 sm:grid-cols-3"
+            onValueChange={(val) => setValue("paymentMethod", val as "COD" | "MOMO")}
+            className="grid gap-3 sm:grid-cols-2"
           >
             {/* COD Option */}
             <div
@@ -379,26 +379,6 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Thanh toán bằng tiền mặt khi nhận hàng.
-                </p>
-              </Label>
-            </div>
-
-            {/* VNPAY Option */}
-            <div
-              className={`flex cursor-pointer items-start space-x-3 rounded-lg border p-4 transition-all ${
-                selectedPaymentMethod === "VNPAY"
-                  ? "border-primary bg-primary/5 ring-1 ring-primary"
-                  : "border-border hover:bg-accent/50"
-              }`}
-              onClick={() => setValue("paymentMethod", "VNPAY")}
-            >
-              <RadioGroupItem value="VNPAY" id="payment-vnpay" className="mt-1" />
-              <Label htmlFor="payment-vnpay" className="cursor-pointer font-normal">
-                <div className="flex items-center gap-2 font-bold text-foreground">
-                  <CreditCard className="size-4 text-blue-600" /> VNPay
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Thanh toán qua Ví / ATM / QR Code VNPay.
                 </p>
               </Label>
             </div>

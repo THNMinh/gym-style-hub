@@ -128,7 +128,7 @@ export function DashboardFeature() {
     },
     {
       title: "Báo cáo Tài chính & Giao dịch",
-      description: "Lịch sử giao dịch thanh toán VnPay, MoMo, COD theo khoảng thời gian.",
+      description: "Lịch sử giao dịch thanh toán MoMo, COD theo khoảng thời gian.",
       href: "/admin/finance",
       badge: "Finance",
       icon: DollarSign,
