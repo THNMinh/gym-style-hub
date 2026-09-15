@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getProducts } from "@/entities/catalog/services";
 import type { Gender } from "@/entities/catalog/types";
@@ -9,17 +9,29 @@ import { Button } from "@/components/ui/button";
 
 export function ProductListFeature({
   initialGender = "All",
+  initialCategory,
   search,
 }: {
   initialGender?: Gender | "All";
+  initialCategory?: string;
   search?: string;
 }) {
   const PAGE_SIZE = 12;
   const [filters, setFilters] = useState<CatalogFilters>({
     ...EMPTY_FILTERS,
     gender: initialGender,
+    categorySlug: initialCategory ?? null,
   });
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      gender: initialGender ?? "All",
+      ...(initialCategory !== undefined ? { categorySlug: initialCategory || null } : {}),
+    }));
+    setPage(1);
+  }, [initialGender, initialCategory]);
 
   const query = useQuery({
     queryKey: ["products", filters, search, page],

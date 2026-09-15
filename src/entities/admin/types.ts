@@ -258,3 +258,92 @@ export interface SystemLogDetailDto {
   createdAt: string;
   updatedAt: string;
 }
+
+// ==========================================
+// Admin User Management Types
+// ==========================================
+export interface AdminUserItemDto {
+  userId: string;
+  email: string;
+  fullName?: string | null;
+  phone?: string | null;
+  role: string;
+  isEmailVerified: boolean;
+  isActive: boolean;
+  avatarUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminUsersResponse {
+  items: AdminUserItemDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface AdminUserAddressDto {
+  addressId: string;
+  receiverName: string;
+  phoneNumber: string;
+  addressLine1: string;
+  ward: string;
+  district: string;
+  city: string;
+  isDefault: boolean;
+  addressType: string;
+}
+
+export interface AdminUserOrderSummaryDto {
+  orderId: string;
+  orderCode: string;
+  totalAmount: number;
+  currentStatus: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  createdAt: string;
+}
+
+export interface AdminUserDetailsResponse {
+  userId: string;
+  email: string;
+  fullName?: string | null;
+  phone?: string | null;
+  role: string;
+  isEmailVerified: boolean;
+  isActive: boolean;
+  avatarUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  addresses: AdminUserAddressDto[];
+  recentOrders: AdminUserOrderSummaryDto[];
+  totalOrders: number;
+  totalSpent: number;
+}
+
+export interface CreateAdminUserPayload {
+  email: string;
+  password: string;
+  fullName?: string;
+  phone?: string;
+  role?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateAdminUserPayload {
+  fullName?: string;
+  phone?: string;
+  role?: string;
+  isActive?: boolean;
+  isEmailVerified?: boolean;
+}
+
+export interface AdminUserQueryParams {
+  searchTerm?: string;
+  role?: string;
+  isActive?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+

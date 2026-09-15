@@ -10,6 +10,7 @@ import {
   Dumbbell,
   Star,
   Ticket,
+  Users,
   ShieldAlert,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Tổng quan (Dashboard)", href: "/admin/dashboard", icon: LayoutDashboard },
+  { name: "Quản lý Người dùng", href: "/admin/users", icon: Users },
   { name: "Quản lý Đơn hàng", href: "/admin/orders", icon: ShoppingBag },
   { name: "Quản lý Tồn kho", href: "/admin/inventory", icon: Package },
   { name: "Báo cáo Tài chính", href: "/admin/finance", icon: DollarSign },
@@ -33,7 +35,7 @@ export function AdminSidebar() {
 
   const handleLogout = () => {
     logout();
-    navigate({ to: "/auth" });
+    navigate({ to: "/auth", search: {} as never });
   };
 
   return (

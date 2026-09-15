@@ -16,6 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const hydrated = useHydrated();
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const logout = useAuthStore((s) => s.logout);
 
   // Giải mã trực tiếp Claim Role từ AccessToken để phòng trường hợp Zustand cache user cũ
   const payload = accessToken ? parseJwtPayload(accessToken) : null;
@@ -61,7 +62,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </p>
             <div className="pt-2 flex flex-col gap-2">
               <Button
-                onClick={() => navigate({ to: "/auth", search: { redirect: "/admin/dashboard" } as never })}
+                onClick={() => {
+                  logout();
+                  navigate({ to: "/auth", search: { redirect: "/admin/dashboard" } as never });
+                }}
                 className="w-full font-bold gap-2"
               >
                 <LogIn className="size-4" /> Đăng nhập tài khoản Admin

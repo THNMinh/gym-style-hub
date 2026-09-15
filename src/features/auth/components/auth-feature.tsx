@@ -71,9 +71,18 @@ export function AuthFeature() {
       refreshToken,
     });
 
+    const isAdmin = Boolean(
+      user?.role === "Admin" ||
+      user?.role?.toLowerCase() === "admin"
+    );
+
     if (redirectUrl) {
-      navigate({ to: redirectUrl as any });
-    } else if (user.role === "Admin") {
+      if (redirectUrl.startsWith("/admin") && !isAdmin) {
+        navigate({ to: "/account" });
+      } else {
+        navigate({ to: redirectUrl as any });
+      }
+    } else if (isAdmin) {
       navigate({ to: "/admin/dashboard" });
     } else {
       navigate({ to: "/account" });

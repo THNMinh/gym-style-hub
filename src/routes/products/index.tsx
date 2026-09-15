@@ -31,11 +31,14 @@ export const Route = createFileRoute("/products/")({
 function ProductsPage() {
   const search = Route.useSearch();
   const gender = search.gender;
+  const category = search.category;
   return (
     <ProductListFeature
+      key={`${gender ?? "All"}-${category ?? ""}-${search.q ?? ""}`}
       {...(gender === "Men" || gender === "Women" || gender === "Unisex" || gender === "All"
         ? { initialGender: gender }
         : {})}
+      {...(category ? { initialCategory: category } : {})}
       {...(search.q ? { search: search.q } : {})}
     />
   );

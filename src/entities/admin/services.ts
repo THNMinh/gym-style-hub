@@ -21,6 +21,12 @@ import type {
   InventoryTransactionsResponse,
   SystemLogsResponse,
   SystemLogDetailDto,
+  AdminUserItemDto,
+  AdminUsersResponse,
+  AdminUserDetailsResponse,
+  CreateAdminUserPayload,
+  UpdateAdminUserPayload,
+  AdminUserQueryParams,
 } from "./types";
 
 // ==========================================
@@ -528,3 +534,46 @@ export async function getSystemLogsApi(params?: {
 export async function getSystemLogByIdApi(logId: string): Promise<SystemLogDetailDto> {
   return request<SystemLogDetailDto>(`/api/admin/system-logs/${logId}`);
 }
+
+// ==========================================
+// 8. Admin User Management APIs
+// ==========================================
+export async function getAdminUsersApi(params?: AdminUserQueryParams): Promise<AdminUsersResponse> {
+  const query = new URLSearchParams();
+  if (params?.searchTerm) query.set("searchTerm", params.searchTerm);
+  if (params?.role) query.set("role", params.role);
+  if (params?.isActive !== undefined) query.set("isActive", String(params.isActive));
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.pageSize) query.set("pageSize", String(params.pageSize));
+
+  const qs = query.toString();
+  return request<AdminUsersResponse>(`/api/admin/users${qs ? `?${qs}` : ""}`);
+}
+
+export async function getAdminUserByIdApi(userId: string): Promise<AdminUserDetailsResponse> {
+  return request<AdminUserDetailsResponse>(`/api/admin/users/${userId}`);
+}
+
+export async function createAdminUserApi(payload: CreateAdminUserPayload): Promise<AdminUserItemDto> {
+  return request<AdminUserItemDto>(`/api/admin/users`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function updateAdminUserApi(
+  userId: string,
+  payload: UpdateAdminUserPayload
+): Promise<AdminUserItemDto> {
+  return request<AdminUserItemDto>(`/api/admin/users/${userId}`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export async function deleteAdminUserApi(userId: string): Promise<void> {
+  return request<void>(`/api/admin/users/${userId}`, {
+    method: "DELETE",
+  });
+}
+
