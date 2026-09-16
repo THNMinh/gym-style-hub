@@ -16,6 +16,9 @@ import {
   Check,
   Layers,
   Ruler,
+  RefreshCw,
+  Sparkles,
+  ChevronRight,
 } from "lucide-react";
 import {
   getCategoriesApi,
@@ -27,6 +30,7 @@ import {
   updateProductAdminApi,
   deleteProductAdminApi,
   getVariantsAdminApi,
+  getVariantsGroupedByColorApi,
   createVariantAdminApi,
   updateVariantAdminApi,
   deleteVariantAdminApi,
@@ -40,7 +44,7 @@ import {
   updateAdminSizeGuideApi,
 } from "@/entities/sizeguide/services";
 import type { SizeGuideItem, CreateSizeGuidePayload } from "@/entities/sizeguide/types";
-import type { AdminProductDto, CategoryDto, VariantDto, ProductImageDto } from "@/entities/admin/types";
+import type { AdminProductDto, CategoryDto, VariantDto, ProductColorGroupDto, ProductImageDto } from "@/entities/admin/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -114,7 +118,60 @@ const PRESET_COLORS = [
   { name: "Purple", hex: "#7E22CE" },
   { name: "Olive", hex: "#4D7C0F" },
   { name: "Beige", hex: "#F5F5DC" },
+  { name: "Espresso Brown", hex: "#4A2E18" },
 ];
+
+export const STANDARD_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"] as const;
+
+export function slugify(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "d")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+const COLOR_CODE_MAP: Record<string, string> = {
+  black: "BLK",
+  white: "WHT",
+  charcoal: "CHR",
+  "light grey": "GRY",
+  grey: "GRY",
+  gray: "GRY",
+  navy: "NVY",
+  "royal blue": "RBL",
+  blue: "BLU",
+  red: "RED",
+  pink: "PNK",
+  "poise pink": "PNK",
+  "strength pink": "SPK",
+  purple: "PRP",
+  olive: "OLV",
+  beige: "BGE",
+  "espresso brown": "BRN",
+  brown: "BRN",
+  green: "GRN",
+};
+
+export function generateSku(productSlug: string, colorName: string, size: string): string {
+  const parts = productSlug
+    .split("-")
+    .filter((w) => !["ao", "quan", "tap", "gym", "seamless", "wide", "neck", "long", "sleeve"].includes(w.toLowerCase()));
+  const slugCode = (parts.length > 0 ? parts.slice(0, 2).join("-") : productSlug.slice(0, 8))
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase() || "PROD";
+
+  const cleanColor = colorName.trim().toLowerCase();
+  const colorCode = COLOR_CODE_MAP[cleanColor] || cleanColor.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase();
+  const cleanSize = size.trim().toUpperCase();
+
+  return `GK-${slugCode}-${colorCode}-${cleanSize}`;
+}
 
 export function CatalogFeature() {
   const queryClient = useQueryClient();
@@ -128,6 +185,11 @@ export function CatalogFeature() {
 
   const [variantProduct, setVariantProduct] = useState<AdminProductDto | null>(null);
   const [editingVariant, setEditingVariant] = useState<VariantDto | null>(null);
+  const [selectedColorTab, setSelectedColorTab] = useState<string | null>(null);
+  const [isAddingNewColor, setIsAddingNewColor] = useState(false);
+  const [customSizeInput, setCustomSizeInput] = useState("");
+  const [showCustomSize, setShowCustomSize] = useState(false);
+
   const [imageProduct, setImageProduct] = useState<AdminProductDto | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
 
@@ -242,10 +304,24 @@ export function CatalogFeature() {
     enabled: !!variantProduct,
   });
 
+  // Query biến thể gom nhóm theo màu (Data thật từ backend API)
+  const colorGroupsQuery = useQuery({
+    queryKey: ["admin-variants-by-color", variantProduct?.productId],
+    queryFn: () => (variantProduct ? getVariantsGroupedByColorApi(variantProduct.productId) : Promise.resolve([])),
+    enabled: !!variantProduct,
+  });
+
   // Query biến thể khi upload hình ảnh
   const imageProductVariantsQuery = useQuery({
     queryKey: ["admin-variants", imageProduct?.productId],
     queryFn: () => (imageProduct ? getVariantsAdminApi(imageProduct.productId) : Promise.resolve([])),
+    enabled: !!imageProduct,
+  });
+
+  // Query biến thể gom nhóm theo màu khi upload hình ảnh (Data thật)
+  const imageProductColorGroupsQuery = useQuery({
+    queryKey: ["admin-variants-by-color", imageProduct?.productId],
+    queryFn: () => (imageProduct ? getVariantsGroupedByColorApi(imageProduct.productId) : Promise.resolve([])),
     enabled: !!imageProduct,
   });
 
@@ -341,6 +417,7 @@ export function CatalogFeature() {
     onSuccess: () => {
       toast.success("Thêm biến thể thành công!");
       queryClient.invalidateQueries({ queryKey: ["admin-variants", variantProduct?.productId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-variants-by-color", variantProduct?.productId] });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
     },
     onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
@@ -353,6 +430,7 @@ export function CatalogFeature() {
       toast.success("Cập nhật biến thể thành công!");
       setEditingVariant(null);
       queryClient.invalidateQueries({ queryKey: ["admin-variants", variantProduct?.productId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-variants-by-color", variantProduct?.productId] });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
     },
     onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
@@ -363,6 +441,7 @@ export function CatalogFeature() {
     onSuccess: () => {
       toast.success("Xóa biến thể thành công!");
       queryClient.invalidateQueries({ queryKey: ["admin-variants", variantProduct?.productId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-variants-by-color", variantProduct?.productId] });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
     },
     onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
@@ -748,290 +827,536 @@ export function CatalogFeature() {
       {/* ------------------------------------------------------------- */}
       {/* MANAGE VARIANTS MODAL (GET/POST/PUT/DELETE /api/products/variants) */}
       {/* ------------------------------------------------------------- */}
+      {/* ------------------------------------------------------------- */}
+      {/* MANAGE VARIANTS MODAL (Grouped by Real Color API Data)        */}
+      {/* ------------------------------------------------------------- */}
       <Dialog
         open={variantProduct !== null}
         onOpenChange={(open) => {
           if (!open) {
             setVariantProduct(null);
             setEditingVariant(null);
+            setSelectedColorTab(null);
+            setIsAddingNewColor(false);
+            setShowCustomSize(false);
           }
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-bold">Quản lý Biến thể (Variants) — {variantProduct?.name}</DialogTitle>
+            <DialogTitle className="font-bold flex items-center justify-between">
+              <span>Quản lý Biến thể (Variants) — {variantProduct?.name}</span>
+            </DialogTitle>
             <DialogDescription>
-              Xem danh sách biến thể Màu sắc/Size hiện có hoặc thêm/sửa biến thể cho sản phẩm.
+              Tổ chức biến thể theo từng Màu sắc và Kích cỡ. Dữ liệu màu sắc được đồng bộ thực tế từ database.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-2">
-            {/* Existing Variants Table */}
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-muted px-4 py-2 text-xs font-bold text-muted-foreground border-b flex justify-between">
-                <span>Biến thể hiện có ({variantsQuery.data?.length || 0})</span>
-              </div>
-              <div className="max-h-56 overflow-y-auto divide-y">
-                {variantsQuery.isLoading ? (
-                  <div className="p-4 text-center text-xs text-muted-foreground">Đang tải biến thể...</div>
-                ) : !variantsQuery.data || variantsQuery.data.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-muted-foreground">
-                    Chưa có biến thể nào. Hãy thêm ở form dưới!
+          {(() => {
+            const colorGroups = colorGroupsQuery.data ?? [];
+            const activeColorName = selectedColorTab || colorGroups[0]?.colorName || null;
+            const activeGroup = isAddingNewColor
+              ? null
+              : colorGroups.find((g) => g.colorName.toLowerCase() === (activeColorName || "").toLowerCase()) || colorGroups[0] || null;
+
+            const currentColorName = isAddingNewColor
+              ? (variantForm.watch("colorName") || "Black")
+              : (activeGroup?.colorName || "Black");
+            const currentColorHex = isAddingNewColor
+              ? (variantForm.watch("colorHex") || "#000000")
+              : (activeGroup?.colorHex || "#000000");
+
+            return (
+              <div className="space-y-6 py-2">
+                {/* 1. Color Navigation Tabs (Real Data from API) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5">
+                      <Palette className="size-3.5 text-primary" /> Màu sắc hiện có ({colorGroups.length}):
+                    </Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={isAddingNewColor ? "default" : "outline"}
+                      className="h-7 text-xs gap-1"
+                      onClick={() => {
+                        setIsAddingNewColor(true);
+                        setEditingVariant(null);
+                        setShowCustomSize(false);
+                        if (variantProduct) {
+                          const defaultColor = "Navy";
+                          const defaultSize = "M";
+                          variantForm.reset({
+                            productId: variantProduct.productId,
+                            colorName: defaultColor,
+                            colorHex: "#0B192C",
+                            size: defaultSize,
+                            price: 299000,
+                            sku: generateSku(variantProduct.slug, defaultColor, defaultSize),
+                          });
+                        }
+                      }}
+                    >
+                      <Plus className="size-3.5" /> Thêm màu mới
+                    </Button>
                   </div>
-                ) : (
-                  variantsQuery.data.map((v) => {
-                    const matchedImg = variantProductImagesQuery.data?.find(
-                      (img) =>
-                        img.variantId === v.variantId ||
-                        (img.imageUrl && v.colorName && img.imageUrl.toLowerCase().includes(v.colorName.toLowerCase())),
-                    )?.imageUrl;
 
-                    const isBeingEdited = editingVariant?.variantId === v.variantId;
-
-                    return (
-                      <div
-                        key={v.variantId}
-                        className={cn(
-                          "p-3 flex items-center justify-between text-xs hover:bg-muted/30 transition-colors",
-                          isBeingEdited && "bg-primary/5 ring-1 ring-primary/40",
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          {matchedImg ? (
-                            <img
-                              src={matchedImg}
-                              alt={v.colorName}
-                              className="size-10 rounded border object-cover shrink-0 shadow-xs"
+                  {colorGroupsQuery.isLoading ? (
+                    <div className="p-3 text-center text-xs text-muted-foreground">Đang tải nhóm màu...</div>
+                  ) : colorGroups.length === 0 && !isAddingNewColor ? (
+                    <div className="p-4 text-center text-xs text-muted-foreground border border-dashed rounded-lg bg-muted/20">
+                      Chưa có biến thể màu nào. Hãy bấm <strong>"+ Thêm màu mới"</strong> ở trên để tạo màu đầu tiên!
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {colorGroups.map((group) => {
+                        const isSelected = !isAddingNewColor && (activeGroup?.colorName.toLowerCase() === group.colorName.toLowerCase());
+                        return (
+                          <button
+                            key={group.colorName}
+                            type="button"
+                            onClick={() => {
+                              setSelectedColorTab(group.colorName);
+                              setIsAddingNewColor(false);
+                              setEditingVariant(null);
+                              setShowCustomSize(false);
+                              if (variantProduct) {
+                                const defaultSize = STANDARD_SIZES.find((s) => !group.availableSizes.includes(s)) || "M";
+                                variantForm.reset({
+                                  productId: variantProduct.productId,
+                                  colorName: group.colorName,
+                                  colorHex: group.colorHex || "#000000",
+                                  size: defaultSize,
+                                  price: group.variants[0]?.price || 299000,
+                                  originalPrice: group.variants[0]?.originalPrice ?? undefined,
+                                  sku: generateSku(variantProduct.slug, group.colorName, defaultSize),
+                                });
+                              }
+                            }}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold transition-all",
+                              isSelected
+                                ? "border-primary bg-primary/10 ring-1 ring-primary shadow-xs"
+                                : "border-border bg-background hover:bg-muted/50 text-muted-foreground hover:text-foreground",
+                            )}
+                          >
+                            <span
+                              className="size-3.5 rounded-full border shadow-xs shrink-0"
+                              style={{ backgroundColor: group.colorHex || "#000000" }}
                             />
-                          ) : (
-                            <div className="size-10 rounded border bg-muted flex items-center justify-center shrink-0 text-muted-foreground">
-                              <ImageIcon className="size-4" />
-                            </div>
-                          )}
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold text-primary">{v.sku}</span>
-                              <span
-                                className="inline-block size-3.5 rounded-full border shadow-sm"
-                                style={{ backgroundColor: v.colorHex }}
-                              />
-                              <span className="font-semibold">{v.colorName}</span>
-                              <Badge variant="secondary" className="font-bold">
+                            <span>{group.colorName}</span>
+                            <Badge variant="secondary" className="font-bold text-[10px] px-1.5 py-0 h-4">
+                              {group.variants.length} size
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground">({group.totalAvailableStock} tồn)</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Existing Sizes Table for Selected Color */}
+                {activeGroup && !isAddingNewColor && (
+                  <div className="border rounded-lg overflow-hidden bg-background shadow-xs">
+                    <div className="bg-muted/50 px-4 py-2 text-xs font-bold flex items-center justify-between border-b">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="size-3 rounded-full border shadow-xs"
+                          style={{ backgroundColor: activeGroup.colorHex || "#000000" }}
+                        />
+                        <span>Kích cỡ hiện có của màu {activeGroup.colorName} ({activeGroup.variants.length})</span>
+                      </div>
+                      <span className="text-[11px] font-normal text-muted-foreground">
+                        Tổng khả dụng: <strong className="text-foreground">{activeGroup.totalAvailableStock}</strong>
+                      </span>
+                    </div>
+
+                    <div className="divide-y max-h-48 overflow-y-auto">
+                      {activeGroup.variants.map((v) => {
+                        const isBeingEdited = editingVariant?.variantId === v.variantId;
+                        return (
+                          <div
+                            key={v.variantId}
+                            className={cn(
+                              "p-3 flex items-center justify-between text-xs hover:bg-muted/30 transition-colors",
+                              isBeingEdited && "bg-primary/5 ring-1 ring-primary/40 font-medium",
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Badge variant="secondary" className="font-bold text-xs h-6 px-2.5">
                                 {v.size}
                               </Badge>
+                              <div>
+                                <div className="font-mono font-bold text-primary">{v.sku}</div>
+                                <div className="text-muted-foreground flex items-center gap-2">
+                                  <span>{formatPrice(v.price)}</span>
+                                  {v.originalPrice && (
+                                    <span className="line-through text-[11px] text-muted-foreground/80">
+                                      {formatPrice(v.originalPrice)}
+                                    </span>
+                                  )}
+                                  <span className="text-border">|</span>
+                                  <span className="text-[11px]">Tồn khả dụng: <strong className="text-foreground">{v.availableStock ?? 0}</strong></span>
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-muted-foreground font-bold">{formatPrice(v.price)}</p>
+
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingVariant(v);
+                                  setShowCustomSize(!STANDARD_SIZES.includes(v.size as any));
+                                  variantForm.reset({
+                                    productId: v.productId,
+                                    sku: v.sku,
+                                    colorName: v.colorName,
+                                    colorHex: v.colorHex || "#000000",
+                                    size: v.size,
+                                    price: v.price,
+                                    originalPrice: v.originalPrice ?? undefined,
+                                  });
+                                }}
+                                className="h-7 text-xs text-primary hover:bg-primary/10"
+                              >
+                                <Edit3 className="size-3.5 mr-1" /> Sửa
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  if (confirm(`Bạn có chắc muốn xóa biến thể ${v.colorName} - Size ${v.size} (${v.sku})?`)) {
+                                    deleteVariantMutation.mutate(v.variantId);
+                                  }
+                                }}
+                                className="h-7 text-destructive hover:bg-destructive/10 text-xs"
+                              >
+                                <Trash2 className="size-3.5 mr-1" /> Xóa
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Add / Edit Variant Form */}
+                <form
+                  onSubmit={variantForm.handleSubmit((values) => {
+                    if (editingVariant) {
+                      updateVariantMutation.mutate({
+                        variantId: editingVariant.variantId,
+                        payload: {
+                          ...values,
+                          price: Number(values.price),
+                        },
+                      });
+                    } else {
+                      createVariantMutation.mutate({
+                        ...values,
+                        price: Number(values.price),
+                      });
+                    }
+                  })}
+                  className="space-y-4 p-4 border rounded-lg bg-muted/20"
+                >
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h4 className="text-xs font-bold uppercase text-foreground flex items-center gap-1.5">
+                      {editingVariant ? (
+                        <>
+                          <Edit3 className="size-4 text-primary" /> Chỉnh sửa biến thể — Size {editingVariant.size} ({editingVariant.sku})
+                        </>
+                      ) : isAddingNewColor ? (
+                        <>
+                          <Plus className="size-4 text-primary" /> Thêm biến thể cho Màu sắc mới
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="size-4 text-primary" /> Thêm Size mới cho màu {activeGroup?.colorName}
+                        </>
+                      )}
+                    </h4>
+                    {editingVariant && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs text-muted-foreground"
+                        onClick={() => {
+                          setEditingVariant(null);
+                          if (activeGroup && variantProduct) {
+                            const defaultSize = STANDARD_SIZES.find((s) => !activeGroup.availableSizes.includes(s)) || "M";
+                            variantForm.reset({
+                              productId: variantProduct.productId,
+                              colorName: activeGroup.colorName,
+                              colorHex: activeGroup.colorHex || "#000000",
+                              size: defaultSize,
+                              price: activeGroup.variants[0]?.price || 299000,
+                              sku: generateSku(variantProduct.slug, activeGroup.colorName, defaultSize),
+                            });
+                          }
+                        }}
+                      >
+                        Hủy chỉnh sửa
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Color Section (Editable if new color or editing, fixed if adding size to existing color) */}
+                  {isAddingNewColor || editingVariant ? (
+                    <div className="space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <Label htmlFor="var-color" className="text-xs">Tên màu (*)</Label>
+                          <Input
+                            id="var-color"
+                            className="h-9 text-xs"
+                            placeholder="Black"
+                            {...variantForm.register("colorName", {
+                              onChange: (e) => {
+                                if (variantProduct) {
+                                  const currentSize = variantForm.getValues("size") || "M";
+                                  variantForm.setValue("sku", generateSku(variantProduct.slug, e.target.value, currentSize));
+                                }
+                              },
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="var-hex" className="text-xs">Bảng chọn màu (Picker) (*)</Label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={variantForm.watch("colorHex") || "#000000"}
+                              onChange={(e) => variantForm.setValue("colorHex", e.target.value.toUpperCase())}
+                              className="size-9 p-0.5 rounded cursor-pointer border bg-background shrink-0"
+                            />
+                            <Input
+                              id="var-hex"
+                              className="h-9 text-xs font-mono"
+                              placeholder="#000000"
+                              {...variantForm.register("colorHex")}
+                            />
                           </div>
                         </div>
+                      </div>
 
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditingVariant(v);
-                              variantForm.reset({
-                                productId: v.productId,
-                                sku: v.sku,
-                                colorName: v.colorName,
-                                colorHex: v.colorHex || "#000000",
-                                size: v.size,
-                                price: v.price,
-                                originalPrice: v.originalPrice ?? undefined,
-                              });
-                            }}
-                            className="h-7 text-xs text-primary hover:bg-primary/10"
-                          >
-                            <Edit3 className="size-3.5 mr-1" /> Sửa
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => deleteVariantMutation.mutate(v.variantId)}
-                            className="h-7 text-destructive hover:bg-destructive/10 text-xs"
-                          >
-                            <Trash2 className="size-3.5 mr-1" /> Xóa
-                          </Button>
+                      {/* Preset GymKitten Color Palette */}
+                      <div className="space-y-1.5 pt-1">
+                        <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                          <Palette className="size-3 text-primary" /> Bấm chọn nhanh màu GymKitten:
+                        </Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {PRESET_COLORS.map((preset) => {
+                            const selected = variantForm.watch("colorHex")?.toUpperCase() === preset.hex.toUpperCase();
+                            return (
+                              <button
+                                key={preset.name}
+                                type="button"
+                                onClick={() => {
+                                  variantForm.setValue("colorName", preset.name);
+                                  variantForm.setValue("colorHex", preset.hex);
+                                  if (variantProduct) {
+                                    const currentSize = variantForm.getValues("size") || "M";
+                                    variantForm.setValue("sku", generateSku(variantProduct.slug, preset.name, currentSize));
+                                  }
+                                }}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all",
+                                  selected
+                                    ? "border-primary bg-primary/10 ring-1 ring-primary font-bold"
+                                    : "border-border bg-background hover:bg-muted",
+                                )}
+                              >
+                                <span
+                                  className="size-3 rounded-full border shadow-xs"
+                                  style={{ backgroundColor: preset.hex }}
+                                />
+                                <span>{preset.name}</span>
+                                {selected && <Check className="size-3 text-primary" />}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* Add / Edit Variant Form */}
-            <form
-              onSubmit={variantForm.handleSubmit((values) => {
-                if (editingVariant) {
-                  updateVariantMutation.mutate({
-                    variantId: editingVariant.variantId,
-                    payload: {
-                      ...values,
-                      price: Number(values.price),
-                    },
-                  });
-                } else {
-                  createVariantMutation.mutate({
-                    ...values,
-                    price: Number(values.price),
-                  });
-                }
-              })}
-              className="space-y-4 p-4 border rounded-lg bg-muted/20"
-            >
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase text-foreground flex items-center gap-1.5">
-                  {editingVariant ? (
-                    <>
-                      <Edit3 className="size-4 text-primary" /> Chỉnh sửa biến thể — {editingVariant.sku}
-                    </>
+                    </div>
                   ) : (
-                    <>
-                      <Plus className="size-4 text-primary" /> Thêm biến thể mới
-                    </>
+                    <div className="flex items-center justify-between p-2.5 rounded-lg border bg-background/80 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="size-3.5 rounded-full border shadow-xs shrink-0"
+                          style={{ backgroundColor: currentColorHex }}
+                        />
+                        <span>Đang thêm vào màu: <strong className="font-bold">{currentColorName}</strong></span>
+                      </div>
+                      <Badge variant="outline" className="text-[11px]">Đồng bộ màu tự động</Badge>
+                    </div>
                   )}
-                </h4>
-                {editingVariant && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs text-muted-foreground"
-                    onClick={() => {
-                      setEditingVariant(null);
-                      if (variantProduct) {
-                        variantForm.reset({
-                          productId: variantProduct.productId,
-                          sku: `${variantProduct.slug.toUpperCase()}-${Date.now().toString().slice(-4)}`,
-                          colorName: "Black",
-                          colorHex: "#000000",
-                          size: "M",
-                          price: 299000,
-                        });
-                      }
-                    }}
-                  >
-                    Hủy chỉnh sửa
-                  </Button>
-                )}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="var-sku">Mã SKU (*)</Label>
-                <Input id="var-sku" className="h-9 text-xs font-mono" {...variantForm.register("sku")} />
-                {variantForm.formState.errors.sku && (
-                  <p className="text-xs text-destructive">{variantForm.formState.errors.sku.message}</p>
-                )}
-              </div>
+                  {/* Standard Size Selector (Pills) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold flex items-center gap-1.5">
+                        <Ruler className="size-3.5 text-primary" /> Chọn Kích cỡ (Size) (*):
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomSize(!showCustomSize)}
+                        className="text-[11px] text-primary hover:underline"
+                      >
+                        {showCustomSize ? "Dùng size chuẩn (XS-3XL)" : "Nhập size khác..."}
+                      </button>
+                    </div>
 
-              {/* Color Name, Color Picker Input & Hex */}
-              <div className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div>
-                    <Label htmlFor="var-color" className="text-xs">Tên màu (*)</Label>
-                    <Input id="var-color" className="h-9 text-xs" placeholder="Black" {...variantForm.register("colorName")} />
+                    {!showCustomSize ? (
+                      <div className="flex flex-wrap gap-2">
+                        {STANDARD_SIZES.map((sz) => {
+                          const currentSelectedSize = variantForm.watch("size");
+                          const isSelected = currentSelectedSize === sz;
+                          const alreadyExists =
+                            !editingVariant &&
+                            activeGroup?.availableSizes.some((s) => s.toUpperCase() === sz.toUpperCase());
+
+                          return (
+                            <button
+                              key={sz}
+                              type="button"
+                              disabled={alreadyExists}
+                              onClick={() => {
+                                variantForm.setValue("size", sz, { shouldValidate: true });
+                                if (variantProduct) {
+                                  const autoSku = generateSku(variantProduct.slug, currentColorName, sz);
+                                  variantForm.setValue("sku", autoSku, { shouldValidate: true });
+                                }
+                              }}
+                              className={cn(
+                                "min-w-12 h-9 px-3 rounded-md text-xs font-bold border transition-all flex items-center justify-center gap-1",
+                                isSelected
+                                  ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                                  : alreadyExists
+                                  ? "opacity-40 bg-muted border-dashed border-border cursor-not-allowed line-through text-muted-foreground"
+                                  : "border-border bg-background hover:bg-muted text-foreground",
+                              )}
+                              title={alreadyExists ? `Màu ${currentColorName} đã có Size ${sz}` : `Chọn Size ${sz}`}
+                            >
+                              <span>{sz}</span>
+                              {alreadyExists && <span className="text-[9px] font-normal no-underline">(Đã có)</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <Input
+                          id="var-size-custom"
+                          className="h-9 text-xs font-bold"
+                          placeholder="Nhập kích cỡ (VD: Freesize, One Size, 700ml...)"
+                          {...variantForm.register("size", {
+                            onChange: (e) => {
+                              if (variantProduct) {
+                                const autoSku = generateSku(variantProduct.slug, currentColorName, e.target.value);
+                                variantForm.setValue("sku", autoSku);
+                              }
+                            },
+                          })}
+                        />
+                      </div>
+                    )}
+                    {variantForm.formState.errors.size && (
+                      <p className="text-xs text-destructive">{variantForm.formState.errors.size.message}</p>
+                    )}
                   </div>
-                  <div>
-                    <Label htmlFor="var-hex" className="text-xs">Bảng chọn màu (Picker) (*)</Label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={variantForm.watch("colorHex") || "#000000"}
-                        onChange={(e) => variantForm.setValue("colorHex", e.target.value.toUpperCase())}
-                        className="size-9 p-0.5 rounded cursor-pointer border bg-background"
-                      />
+
+                  {/* SKU Input with Auto-generate & Refresh */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="var-sku" className="text-xs">Mã SKU (*)</Label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (variantProduct) {
+                            const curSize = variantForm.getValues("size") || "M";
+                            const newSku = generateSku(variantProduct.slug, currentColorName, curSize);
+                            variantForm.setValue("sku", newSku, { shouldValidate: true });
+                            toast.info(`Đã tái tạo SKU: ${newSku}`);
+                          }
+                        }}
+                        className="text-[11px] text-primary hover:underline flex items-center gap-1"
+                      >
+                        <RefreshCw className="size-3" /> Tự sinh lại SKU
+                      </button>
+                    </div>
+                    <Input id="var-sku" className="h-9 text-xs font-mono font-bold text-primary" {...variantForm.register("sku")} />
+                    {variantForm.formState.errors.sku && (
+                      <p className="text-xs text-destructive">{variantForm.formState.errors.sku.message}</p>
+                    )}
+                  </div>
+
+                  {/* Price and Original Price */}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="var-price" className="text-xs">Giá niêm yết (đ) (*)</Label>
                       <Input
-                        id="var-hex"
-                        className="h-9 text-xs font-mono"
-                        placeholder="#000000"
-                        {...variantForm.register("colorHex")}
+                        id="var-price"
+                        type="number"
+                        className="h-9 text-xs"
+                        {...variantForm.register("price", { valueAsNumber: true })}
+                      />
+                      {variantForm.formState.errors.price && (
+                        <p className="text-xs text-destructive">{variantForm.formState.errors.price.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="var-orig-price" className="text-xs">Giá gốc (đ) (Tùy chọn)</Label>
+                      <Input
+                        id="var-orig-price"
+                        type="number"
+                        placeholder="VD: 399000"
+                        className="h-9 text-xs"
+                        {...variantForm.register("originalPrice", {
+                          setValueAs: (v) => (v === "" || v === null || isNaN(v) ? undefined : Number(v)),
+                        })}
                       />
                     </div>
                   </div>
-                  <div>
-                    <Label htmlFor="var-size" className="text-xs">Size (*)</Label>
-                    <Input id="var-size" className="h-9 text-xs" placeholder="M" {...variantForm.register("size")} />
-                  </div>
-                </div>
 
-                {/* Preset GymKitten Color Palette */}
-                <div className="space-y-1.5 pt-1">
-                  <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
-                    <Palette className="size-3 text-primary" /> Màu gợi ý GymKitten (Bấm chọn nhanh):
-                  </Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESET_COLORS.map((preset) => {
-                      const selected = variantForm.watch("colorHex")?.toUpperCase() === preset.hex.toUpperCase();
-                      return (
-                        <button
-                          key={preset.hex}
-                          type="button"
-                          onClick={() => {
-                            variantForm.setValue("colorName", preset.name);
-                            variantForm.setValue("colorHex", preset.hex);
-                          }}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-                            selected
-                              ? "border-primary bg-primary/10 ring-1 ring-primary font-bold"
-                              : "border-border bg-background hover:bg-muted"
-                          }`}
-                        >
-                          <span
-                            className="size-3 rounded-full border shadow-sm"
-                            style={{ backgroundColor: preset.hex }}
-                          />
-                          <span>{preset.name}</span>
-                          {selected && <Check className="size-3 text-primary" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                  <DialogFooter className="pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setVariantProduct(null);
+                        setEditingVariant(null);
+                        setSelectedColorTab(null);
+                        setIsAddingNewColor(false);
+                      }}
+                    >
+                      Đóng
+                    </Button>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={createVariantMutation.isPending || updateVariantMutation.isPending}
+                      className="font-bold"
+                    >
+                      {editingVariant
+                        ? updateVariantMutation.isPending
+                          ? "Đang lưu..."
+                          : "Cập nhật biến thể"
+                        : createVariantMutation.isPending
+                          ? "Đang lưu..."
+                          : "Lưu biến thể mới"}
+                    </Button>
+                  </DialogFooter>
+                </form>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="var-price" className="text-xs">Giá niêm yết (đ) (*)</Label>
-                <Input
-                  id="var-price"
-                  type="number"
-                  className="h-9 text-xs"
-                  {...variantForm.register("price", { valueAsNumber: true })}
-                />
-                {variantForm.formState.errors.price && (
-                  <p className="text-xs text-destructive">{variantForm.formState.errors.price.message}</p>
-                )}
-              </div>
-
-              <DialogFooter className="pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setVariantProduct(null);
-                    setEditingVariant(null);
-                  }}
-                >
-                  Đóng
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={createVariantMutation.isPending || updateVariantMutation.isPending}
-                  className="font-bold"
-                >
-                  {editingVariant
-                    ? updateVariantMutation.isPending
-                      ? "Đang lưu..."
-                      : "Cập nhật biến thể"
-                    : createVariantMutation.isPending
-                      ? "Đang lưu..."
-                      : "Lưu biến thể mới"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -1049,13 +1374,24 @@ export function CatalogFeature() {
           >
             <div className="space-y-2">
               <Label htmlFor="cat-name">Tên danh mục (*)</Label>
-              <Input id="cat-name" placeholder="Áo Tập Gym Nam" {...catForm.register("name")} />
+              <Input
+                id="cat-name"
+                placeholder="Áo Tập Gym Nam"
+                {...catForm.register("name", {
+                  onChange: (e) => {
+                    catForm.setValue("slug", slugify(e.target.value), { shouldValidate: true });
+                  },
+                })}
+              />
               {catForm.formState.errors.name && (
                 <p className="text-xs text-destructive">{catForm.formState.errors.name.message}</p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cat-slug">Slug (*)</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="cat-slug">Slug (*)</Label>
+                <span className="text-[10px] text-muted-foreground">Tự động sinh theo tên</span>
+              </div>
               <Input id="cat-slug" placeholder="ao-tap-gym-nam" {...catForm.register("slug")} />
               {catForm.formState.errors.slug && (
                 <p className="text-xs text-destructive">{catForm.formState.errors.slug.message}</p>
@@ -1147,13 +1483,24 @@ export function CatalogFeature() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="prod-name">Tên sản phẩm (*)</Label>
-                <Input id="prod-name" placeholder="GymKitten Essential Tee" {...productForm.register("name")} />
+                <Input
+                  id="prod-name"
+                  placeholder="GymKitten Essential Tee"
+                  {...productForm.register("name", {
+                    onChange: (e) => {
+                      productForm.setValue("slug", slugify(e.target.value), { shouldValidate: true });
+                    },
+                  })}
+                />
                 {productForm.formState.errors.name && (
                   <p className="text-xs text-destructive">{productForm.formState.errors.name.message}</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="prod-slug">Slug (*)</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="prod-slug">Slug (*)</Label>
+                  <span className="text-[10px] text-muted-foreground">Tự động sinh theo tên</span>
+                </div>
                 <Input id="prod-slug" placeholder="gymkitten-essential-tee" {...productForm.register("slug")} />
                 {productForm.formState.errors.slug && (
                   <p className="text-xs text-destructive">{productForm.formState.errors.slug.message}</p>
@@ -1237,8 +1584,12 @@ export function CatalogFeature() {
                         <div className="p-2 space-y-1">
                           <div className="flex items-center justify-between text-[10px]">
                             {img.variantId && matchedVariant ? (
-                              <Badge variant="secondary" className="font-bold text-[9px] truncate max-w-[100px]">
-                                {matchedVariant.colorName} - {matchedVariant.size}
+                              <Badge variant="secondary" className="font-bold text-[9px] truncate max-w-[130px] flex items-center gap-1">
+                                <span
+                                  className="size-2 rounded-full border shrink-0"
+                                  style={{ backgroundColor: matchedVariant.colorHex || "#000" }}
+                                />
+                                <span>Màu {matchedVariant.colorName}</span>
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-[9px]">Gốc (Product)</Badge>
@@ -1273,22 +1624,32 @@ export function CatalogFeature() {
                 <Upload className="size-4 text-blue-600" /> Upload ảnh mới
               </h4>
 
-              {/* Target Variant Selector */}
+              {/* Target Variant Selector (Grouped by Color) */}
               <div className="space-y-2">
-                <Label htmlFor="target-variant" className="text-xs">Áp dụng hình ảnh cho (*)</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="target-variant" className="text-xs">Áp dụng hình ảnh cho (*)</Label>
+                  <span className="text-[10px] text-muted-foreground">Chọn theo Màu đại diện</span>
+                </div>
                 <select
                   id="target-variant"
                   value={selectedVariantId}
                   onChange={(e) => setSelectedVariantId(e.target.value)}
-                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-xs"
+                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-xs font-medium"
                 >
                   <option value="">-- Sản phẩm gốc (Dùng chung cho tất cả biến thể) --</option>
-                  {imageProductVariantsQuery.data?.map((v) => (
-                    <option key={v.variantId} value={v.variantId}>
-                      Biến thể: {v.colorName} - {v.size} (SKU: {v.sku})
-                    </option>
-                  ))}
+                  {imageProductColorGroupsQuery.data && imageProductColorGroupsQuery.data.length > 0
+                    ? imageProductColorGroupsQuery.data.map((g) => (
+                        <option key={g.representativeVariantId} value={g.representativeVariantId}>
+                          Màu sắc: ● {g.colorName} (Áp dụng cho {g.variants.length} size: {g.availableSizes.join(", ")})
+                        </option>
+                      ))
+                    : imageProductVariantsQuery.data?.map((v) => (
+                        <option key={v.variantId} value={v.variantId}>
+                          Biến thể: {v.colorName} - {v.size} (SKU: {v.sku})
+                        </option>
+                      ))}
                 </select>
+                <p className="text-[11px] text-muted-foreground">Ảnh gán cho một màu sẽ tự động hiển thị cho mọi size của màu đó trên trang sản phẩm.</p>
               </div>
 
               {/* File Input */}

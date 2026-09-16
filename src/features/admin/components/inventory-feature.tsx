@@ -95,7 +95,10 @@ export function InventoryFeature() {
 
   const handleOpenRestock = (item: InventoryItem) => {
     setRestockItem(item);
-    restockForm.reset({ variantId: item.variantId, quantity: 10, referenceId: "" });
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const autoBatch = `RESTOCK-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+    restockForm.reset({ variantId: item.variantId, quantity: 10, referenceId: autoBatch });
   };
 
   const handleOpenAdjust = (item: InventoryItem) => {
@@ -264,8 +267,28 @@ export function InventoryFeature() {
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               <Package className="size-5 text-emerald-600" /> Bổ sung kho (Restock)
             </DialogTitle>
-            <DialogDescription>
-              Nhập thêm số lượng cho biến thể: <strong className="text-foreground">{restockItem?.sku}</strong>
+            <DialogDescription asChild>
+              <div className="space-y-2 text-xs text-muted-foreground pt-1">
+                <p>Nhập thêm số lượng cho biến thể: <strong className="font-mono text-foreground">{restockItem?.sku}</strong></p>
+                <div className="rounded-md border bg-muted/40 p-2.5 space-y-1">
+                  <div className="font-semibold text-foreground text-xs">{restockItem?.productName}</div>
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    <div className="flex items-center gap-1.5 font-medium text-foreground">
+                      <span
+                        className="size-3 rounded-full border shadow-xs"
+                        style={{ backgroundColor: restockItem?.colorHex || "#000000" }}
+                      />
+                      <span>{restockItem?.color}</span>
+                    </div>
+                    <span className="text-muted-foreground">•</span>
+                    <Badge variant="secondary" className="font-bold text-[11px] h-5 px-2">
+                      Size {restockItem?.size}
+                    </Badge>
+                    <span className="text-muted-foreground">•</span>
+                    <span>Tồn kho hiện có: <strong className="text-foreground">{restockItem?.quantityOnHand}</strong></span>
+                  </div>
+                </div>
+              </div>
             </DialogDescription>
           </DialogHeader>
 
@@ -295,8 +318,23 @@ export function InventoryFeature() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="referenceId">Mã đợt nhập / Reference ID (Tùy chọn)</Label>
-              <Input id="referenceId" placeholder="VD: RESTOCK-BATCH-001" {...restockForm.register("referenceId")} />
+              <div className="flex items-center justify-between">
+                <Label htmlFor="referenceId">Mã đợt nhập / Reference ID (Tự động sinh)</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const now = new Date();
+                    const pad = (n: number) => n.toString().padStart(2, "0");
+                    const autoBatch = `RESTOCK-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+                    restockForm.setValue("referenceId", autoBatch);
+                  }}
+                  className="text-[11px] text-primary hover:underline"
+                >
+                  Làm mới mã
+                </button>
+              </div>
+              <Input id="referenceId" className="font-mono text-xs" {...restockForm.register("referenceId")} />
+              <p className="text-[11px] text-muted-foreground">Mã được tự động gán theo thời gian thực để admin không mất công gõ tay.</p>
             </div>
 
             <DialogFooter className="pt-2">

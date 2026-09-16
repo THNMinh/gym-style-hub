@@ -226,6 +226,15 @@ export interface VariantDto {
   availableStock?: number;
 }
 
+export interface ProductColorGroupDto {
+  colorName: string;
+  colorHex: string | null;
+  representativeVariantId: string;
+  totalAvailableStock: number;
+  availableSizes: string[];
+  variants: VariantDto[];
+}
+
 export interface CreateVariantRequest {
   productId: string;
   sku: string;

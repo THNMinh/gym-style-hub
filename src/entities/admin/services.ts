@@ -15,6 +15,7 @@ import type {
   CreateProductRequest,
   UpdateProductRequest,
   VariantDto,
+  ProductColorGroupDto,
   CreateVariantRequest,
   AdminOrderItem,
   ProductImageDto,
@@ -413,6 +414,10 @@ export async function deleteProductAdminApi(id: string): Promise<void> {
 
 export async function getVariantsAdminApi(productId: string): Promise<VariantDto[]> {
   return request<VariantDto[]>(`/api/products/${productId}/variants`);
+}
+
+export async function getVariantsGroupedByColorApi(productId: string): Promise<ProductColorGroupDto[]> {
+  return request<ProductColorGroupDto[]>(`/api/products/${productId}/variants/by-color`);
 }
 
 export async function createVariantAdminApi(body: CreateVariantRequest): Promise<VariantDto> {
