@@ -152,7 +152,7 @@ export function OrdersFeature() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Quản lý Đơn hàng & Tracking Hành trình</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Tra cứu đơn hàng, Cập nhật Trạng thái & Chèn thông tin vị trí Bưu cục vào Timeline giao hàng (`PUT /api/admin/orders/status`)
+            Tra cứu đơn hàng, Cập nhật Trạng thái & Chèn thông tin vị trí Bưu cục vào Timeline giao hàng.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">

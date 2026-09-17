@@ -19,6 +19,9 @@ export interface ReviewItemDto {
   productName?: string;
   userId: string;
   userFullName: string;
+  customerEmail?: string;
+  customerFullName?: string;
+  orderId?: string;
   userAvatarUrl?: string | null;
   rating: number;
   comment?: string | null;

@@ -26,7 +26,7 @@ export function FinanceFeature() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Báo cáo Tài chính & Giao dịch (Finance)</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Lịch sử giao dịch các cổng thanh toán (`GET /api/admin/finance/transactions`)
+            Lịch sử giao dịch và đối soát các cổng thanh toán.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">

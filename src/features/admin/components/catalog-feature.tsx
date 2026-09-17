@@ -533,7 +533,7 @@ export function CatalogFeature() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Quản lý Catalog & Sản phẩm</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Thêm / Sửa / Xóa Sản phẩm, Biến thể Màu/Size, Danh mục và Upload/Xóa hình ảnh (`multipart/form-data`)
+            Thêm / Sửa / Xóa Sản phẩm, Biến thể Màu/Size, Danh mục và Upload/Xóa hình ảnh.
           </p>
         </div>
         <div className="flex gap-2">

@@ -63,9 +63,17 @@ export function ProductReviews({ productId }: { productId: string }) {
   const reviewData = reviewsQuery.data;
   const rawItems = reviewData?.items || [];
   const fitSummary = reviewData?.fitFeedbackSummary;
+  const fitTotal = useMemo(() => {
+    if (!fitSummary) return 0;
+    return (fitSummary.trueToSizeCount || 0) + (fitSummary.runsSmallCount || 0) + (fitSummary.runsLargeCount || 0);
+  }, [fitSummary]);
+  const hasFitData = fitTotal > 0;
+  const trueToSize = hasFitData ? (fitSummary?.trueToSizePercentage ?? 0) : 0;
+  const runsSmall = hasFitData ? (fitSummary?.runsSmallPercentage ?? 0) : 0;
+  const runsLarge = hasFitData ? (fitSummary?.runsLargePercentage ?? 0) : 0;
   const breakdown = reviewData?.ratingBreakdown;
   const totalReviews = reviewData?.totalReviews || 0;
-  const averageRating = reviewData?.averageRating || 5.0;
+  const averageRating = reviewData?.averageRating || 0;
 
   // Calculate Breakdown counts and percentages
   const counts = useMemo(() => {
@@ -80,7 +88,7 @@ export function ProductReviews({ productId }: { productId: string }) {
 
   // % of customers who recommend (4 & 5 stars)
   const recommendPercentage = useMemo(() => {
-    if (!totalReviews) return 100;
+    if (!totalReviews) return 0;
     const positive = counts[5] + counts[4];
     return Math.min(100, Math.round((positive / totalReviews) * 100));
   }, [totalReviews, counts]);
@@ -200,10 +208,16 @@ export function ProductReviews({ productId }: { productId: string }) {
               </div>
             </div>
 
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground/90 pt-1">
-              <Check className="size-4 text-emerald-600 dark:text-emerald-400 stroke-[3]" />
-              <span>{recommendPercentage}% khách hàng khuyên dùng sản phẩm này</span>
-            </div>
+            {totalReviews > 0 ? (
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground/90 pt-1">
+                <Check className="size-4 text-emerald-600 dark:text-emerald-400 stroke-[3]" />
+                <span>{recommendPercentage}% khách hàng khuyên dùng sản phẩm này</span>
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground pt-1">
+                Chưa có đánh giá nào cho sản phẩm này
+              </div>
+            )}
           </div>
 
           {/* RATING SNAPSHOT (Gymshark Style) */}
@@ -293,13 +307,15 @@ export function ProductReviews({ productId }: { productId: string }) {
                 </div>
 
                 <div className="relative h-2 w-full bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="absolute top-0 bottom-0 bg-emerald-500 rounded-full transition-all"
-                    style={{
-                      left: `${fitSummary?.runsSmallPercentage || 0}%`,
-                      width: `${fitSummary?.trueToSizePercentage || 100}%`,
-                    }}
-                  />
+                  {hasFitData && trueToSize > 0 && (
+                    <div
+                      className="absolute top-0 bottom-0 bg-emerald-500 rounded-full transition-all"
+                      style={{
+                        left: `${runsSmall}%`,
+                        width: `${trueToSize}%`,
+                      }}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -311,13 +327,13 @@ export function ProductReviews({ productId }: { productId: string }) {
                       <CheckCircle2 className="size-3.5 text-emerald-600" /> Vừa vặn chuẩn size (TrueToSize)
                     </span>
                     <span className="font-bold text-emerald-600">
-                      {fitSummary?.trueToSizePercentage.toFixed(0) || 100}%
+                      {trueToSize.toFixed(0)}%
                     </span>
                   </div>
                   <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mt-1">
                     <div
                       className="h-full bg-emerald-500 rounded-full"
-                      style={{ width: `${fitSummary?.trueToSizePercentage || 100}%` }}
+                      style={{ width: `${trueToSize}%` }}
                     />
                   </div>
                 </div>
@@ -326,13 +342,13 @@ export function ProductReviews({ productId }: { productId: string }) {
                   <div className="flex justify-between font-semibold">
                     <span className="text-muted-foreground">Form hơi nhỏ - Chật (RunsSmall)</span>
                     <span className="font-bold text-amber-600">
-                      {fitSummary?.runsSmallPercentage.toFixed(0) || 0}%
+                      {runsSmall.toFixed(0)}%
                     </span>
                   </div>
                   <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mt-1">
                     <div
                       className="h-full bg-amber-500 rounded-full"
-                      style={{ width: `${fitSummary?.runsSmallPercentage || 0}%` }}
+                      style={{ width: `${runsSmall}%` }}
                     />
                   </div>
                 </div>
@@ -341,16 +357,22 @@ export function ProductReviews({ productId }: { productId: string }) {
                   <div className="flex justify-between font-semibold">
                     <span className="text-muted-foreground">Form rộng rãi - Thoải mái (RunsLarge)</span>
                     <span className="font-bold text-blue-600">
-                      {fitSummary?.runsLargePercentage.toFixed(0) || 0}%
+                      {runsLarge.toFixed(0)}%
                     </span>
                   </div>
                   <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mt-1">
                     <div
                       className="h-full bg-blue-500 rounded-full"
-                      style={{ width: `${fitSummary?.runsLargePercentage || 0}%` }}
+                      style={{ width: `${runsLarge}%` }}
                     />
                   </div>
                 </div>
+
+                {!hasFitData && (
+                  <p className="text-[11px] text-muted-foreground text-center pt-1 italic">
+                    Chưa có đánh giá form dáng cho sản phẩm này.
+                  </p>
+                )}
               </div>
             </div>
           ) : (
