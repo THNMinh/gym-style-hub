@@ -1,5 +1,6 @@
 export interface InventoryItem {
   variantId: string;
+  productId?: string;
   sku: string;
   productName: string;
   color: string;
@@ -8,6 +9,25 @@ export interface InventoryItem {
   quantityOnHand: number;
   quantityReserved: number;
   availableStock: number;
+}
+
+export interface ColorInventoryGroup {
+  color: string;
+  colorName?: string;
+  colorHex?: string | null;
+  quantityOnHand: number;
+  quantityReserved: number;
+  availableStock: number;
+  sizes: InventoryItem[];
+}
+
+export interface ProductInventoryGroup {
+  productId: string;
+  productName: string;
+  quantityOnHand: number;
+  quantityReserved: number;
+  availableStock: number;
+  colors: ColorInventoryGroup[];
 }
 
 export interface InventoryQueryParams {
@@ -19,6 +39,7 @@ export interface InventoryQueryParams {
 
 export interface InventoryPaginatedResponse {
   items: InventoryItem[];
+  groupedProducts?: ProductInventoryGroup[];
   totalCount: number;
   page: number;
   pageSize: number;
@@ -224,6 +245,7 @@ export interface VariantDto {
   originalPrice: number | null;
   weightGrams: number | null;
   availableStock?: number;
+  available?: number;
 }
 
 export interface ProductColorGroupDto {

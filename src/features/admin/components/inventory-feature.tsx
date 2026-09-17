@@ -1,16 +1,33 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Search, Plus, Edit3, RefreshCw, Package, AlertTriangle } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Edit3,
+  RefreshCw,
+  Package,
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  Palette,
+  Layers,
+  Table as TableIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   getInventoryApi,
   restockInventoryApi,
   adjustInventoryApi,
 } from "@/entities/admin/services";
-import type { InventoryItem } from "@/entities/admin/types";
+import type {
+  InventoryItem,
+  ProductInventoryGroup,
+  ColorInventoryGroup,
+} from "@/entities/admin/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +69,11 @@ export function InventoryFeature() {
   const [nameFilter, setNameFilter] = useState("");
   const [page, setPage] = useState(1);
 
+  // View Mode: Hierarchical (Product -> Color -> Size) vs Flat SKU Table
+  const [viewMode, setViewMode] = useState<"hierarchical" | "flat">("hierarchical");
+  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
+  const [selectedColors, setSelectedColors] = useState<Record<string, string>>({});
+
   // Modals state
   const [restockItem, setRestockItem] = useState<InventoryItem | null>(null);
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
@@ -59,8 +81,132 @@ export function InventoryFeature() {
   // Fetch Inventory Data
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-inventory", skuFilter, nameFilter, page],
-    queryFn: () => getInventoryApi({ sku: skuFilter, productName: nameFilter, page, pageSize: 20 }),
+    queryFn: () => getInventoryApi({ sku: skuFilter, productName: nameFilter, page, pageSize: 10 }),
   });
+
+  const getColorName = (c?: ColorInventoryGroup | null): string => {
+    if (!c) return "";
+    return (c.color || c.colorName || "").trim();
+  };
+
+  // Grouped products: Use backend groupedProducts if provided, or build client-side fallback
+  const groupedProducts: ProductInventoryGroup[] = useMemo(() => {
+    if (data?.groupedProducts && data.groupedProducts.length > 0) {
+      return data.groupedProducts.map((p: any) => ({
+        productId: p.productId || "",
+        productName: p.productName || "",
+        quantityOnHand: p.quantityOnHand ?? p.totalQuantityOnHand ?? 0,
+        quantityReserved: p.quantityReserved ?? p.totalQuantityReserved ?? 0,
+        availableStock: p.availableStock ?? p.totalAvailableStock ?? 0,
+        totalVariants: p.totalVariants ?? p.colors?.reduce((sum: number, c: any) => sum + (c.sizes?.length || 0), 0) ?? 0,
+        colors: (p.colors || []).map((c: any) => {
+          const colName = (c.color || c.colorName || "").trim();
+          return {
+            color: colName,
+            colorName: colName,
+            colorHex: c.colorHex,
+            quantityOnHand: c.quantityOnHand ?? c.totalQuantityOnHand ?? 0,
+            quantityReserved: c.quantityReserved ?? c.totalQuantityReserved ?? 0,
+            availableStock: c.availableStock ?? c.totalAvailableStock ?? 0,
+            sizes: c.sizes || [],
+          };
+        }),
+      }));
+    }
+    if (!data?.items || data.items.length === 0) return [];
+
+    const map = new Map<string, ProductInventoryGroup>();
+    for (const item of data.items) {
+      const key = item.productId || item.productName;
+      let prod = map.get(key);
+      if (!prod) {
+        prod = {
+          productId: key,
+          productName: item.productName,
+          quantityOnHand: 0,
+          quantityReserved: 0,
+          availableStock: 0,
+          colors: [],
+        };
+        map.set(key, prod);
+      }
+      prod.quantityOnHand += item.quantityOnHand || 0;
+      prod.quantityReserved += item.quantityReserved || 0;
+      prod.availableStock += item.availableStock || 0;
+
+      const itemColor = (item.color || "").trim();
+      let cGroup = prod.colors.find(
+        (c) => getColorName(c).toLowerCase() === itemColor.toLowerCase()
+      );
+      if (!cGroup) {
+        cGroup = {
+          color: itemColor,
+          colorName: itemColor,
+          colorHex: item.colorHex,
+          quantityOnHand: 0,
+          quantityReserved: 0,
+          availableStock: 0,
+          sizes: [],
+        };
+        prod.colors.push(cGroup);
+      }
+      cGroup.quantityOnHand += item.quantityOnHand || 0;
+      cGroup.quantityReserved += item.quantityReserved || 0;
+      cGroup.availableStock += item.availableStock || 0;
+      cGroup.sizes.push(item);
+    }
+    return Array.from(map.values());
+  }, [data]);
+
+  const isProductExpanded = (productId: string, index: number) => {
+    if (expandedProducts[productId] !== undefined) {
+      return expandedProducts[productId];
+    }
+    // Default open first product or when actively filtering
+    return index === 0 || !!skuFilter || !!nameFilter;
+  };
+
+  const toggleProductExpand = (productId: string, index: number) => {
+    const current = isProductExpanded(productId, index);
+    setExpandedProducts((prev) => ({
+      ...prev,
+      [productId]: !current,
+    }));
+  };
+
+  const expandAll = () => {
+    const next: Record<string, boolean> = {};
+    groupedProducts.forEach((p) => {
+      next[p.productId] = true;
+    });
+    setExpandedProducts(next);
+  };
+
+  const collapseAll = () => {
+    const next: Record<string, boolean> = {};
+    groupedProducts.forEach((p) => {
+      next[p.productId] = false;
+    });
+    setExpandedProducts(next);
+  };
+
+  const getActiveColor = (prod: ProductInventoryGroup) => {
+    if (selectedColors[prod.productId]) {
+      const target = selectedColors[prod.productId].toLowerCase();
+      const match = prod.colors.find(
+        (c) => getColorName(c).toLowerCase() === target
+      );
+      if (match) return getColorName(match);
+    }
+    return prod.colors[0] ? getColorName(prod.colors[0]) : "";
+  };
+
+  const handleSelectColor = (productId: string, color: string) => {
+    setSelectedColors((prev) => ({
+      ...prev,
+      [productId]: color,
+    }));
+  };
 
   // Restock Mutation
   const restockMutation = useMutation({
@@ -113,7 +259,7 @@ export function InventoryFeature() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Quản lý Tồn kho (Inventory)</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Theo dõi SKU, tồn kho thực tế (`QuantityOnHand`), giữ đơn (`QuantityReserved`) và khả dụng (`AvailableStock`).
+            Theo dõi tồn kho theo <strong>Sản phẩm → Màu sắc → Kích cỡ (Size)</strong> để dễ dàng restock và kiểm soát hàng tồn.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
@@ -143,7 +289,7 @@ export function InventoryFeature() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
-                  placeholder="Lọc theo SKU (VD: GK-HOODIE)..."
+                  placeholder="Lọc theo SKU (VD: GK-EVERYDAY)..."
                   value={skuFilter}
                   onChange={(e) => setSkuFilter(e.target.value)}
                   className="pl-9 text-xs"
@@ -161,98 +307,379 @@ export function InventoryFeature() {
             </CardContent>
           </Card>
 
-          {/* Data Table */}
-          <Card className="border border-border/80 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-muted/50 border-b border-border text-xs uppercase font-bold text-muted-foreground">
-                  <tr>
-                    <th className="py-3.5 px-4">SKU</th>
-                    <th className="py-3.5 px-4">Sản phẩm</th>
-                    <th className="py-3.5 px-4">Biến thể</th>
-                    <th className="py-3.5 px-4 text-center">Kho thực tế (OnHand)</th>
-                    <th className="py-3.5 px-4 text-center">Đã giữ đơn (Reserved)</th>
-                    <th className="py-3.5 px-4 text-center">Khả dụng (Available)</th>
-                    <th className="py-3.5 px-4 text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                        Đang tải dữ liệu tồn kho...
-                      </td>
-                    </tr>
-                  ) : !data?.items || data.items.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                        Không tìm thấy sản phẩm tồn kho nào khớp với bộ lọc.
-                      </td>
-                    </tr>
-                  ) : (
-                    data.items.map((item) => (
-                      <tr key={item.variantId} className="hover:bg-muted/30 transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-bold text-xs text-primary">
-                          {item.sku}
-                        </td>
-                        <td className="py-3.5 px-4 font-semibold">{item.productName}</td>
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <Badge variant="outline" className="font-normal flex items-center gap-1.5 px-2 py-0.5">
-                              {item.colorHex && (
-                                <span
-                                  className="size-3 rounded-full border border-black/20 shrink-0 shadow-xs"
-                                  style={{ backgroundColor: item.colorHex }}
-                                  title={`Mã màu: ${item.colorHex}`}
-                                />
-                              )}
-                              <span>{item.color}</span>
-                            </Badge>
-                            <Badge variant="secondary" className="font-bold">
-                              {item.size}
-                            </Badge>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-bold">{item.quantityOnHand}</td>
-                        <td className="py-3.5 px-4 text-center font-medium text-amber-600">
-                          {item.quantityReserved}
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-extrabold text-emerald-600">
-                          {item.availableStock}
-                        </td>
-                        <td className="py-3.5 px-4 text-right space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenRestock(item)}
-                            className="h-8 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                          >
-                            <Plus className="size-3.5 mr-1" /> Restock
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleOpenAdjust(item)}
-                            className="h-8 text-xs font-medium text-slate-600 hover:text-foreground"
-                          >
-                            <Edit3 className="size-3.5 mr-1" /> Sửa
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+          {/* View Mode Controls & Statistics */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-muted/30 p-3 rounded-lg border border-border/60">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-foreground">Chế độ hiển thị:</span>
+              <div className="flex items-center bg-background rounded-md border border-border p-0.5 shadow-2xs">
+                <Button
+                  size="sm"
+                  variant={viewMode === "hierarchical" ? "default" : "ghost"}
+                  onClick={() => setViewMode("hierarchical")}
+                  className="h-7 text-xs font-medium gap-1.5 px-3"
+                >
+                  <Layers className="size-3.5" /> Phân cấp (Sản phẩm → Màu → Size)
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode === "flat" ? "default" : "ghost"}
+                  onClick={() => setViewMode("flat")}
+                  className="h-7 text-xs font-medium gap-1.5 px-3"
+                >
+                  <TableIcon className="size-3.5" /> Bảng chi tiết (Tất cả SKU)
+                </Button>
+              </div>
             </div>
 
-            <AdminPagination
-              page={page}
-              pageSize={20}
-              totalCount={data?.totalCount || 0}
-              totalPages={data?.totalPages || 1}
-              onPageChange={setPage}
-            />
-          </Card>
+            {viewMode === "hierarchical" && groupedProducts.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={expandAll}
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Mở tất cả
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={collapseAll}
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Thu gọn tất cả
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Hierarchical View: Product -> Color -> Size */}
+          {viewMode === "hierarchical" ? (
+            <div className="space-y-4">
+              {isLoading ? (
+                <Card className="p-12 text-center text-muted-foreground text-sm border-dashed">
+                  Đang tải dữ liệu tồn kho...
+                </Card>
+              ) : groupedProducts.length === 0 ? (
+                <Card className="p-12 text-center text-muted-foreground text-sm border-dashed">
+                  Không tìm thấy sản phẩm tồn kho nào khớp với bộ lọc.
+                </Card>
+              ) : (
+                groupedProducts.map((prod, pIdx) => {
+                  const isExpanded = isProductExpanded(prod.productId, pIdx);
+                  const activeColorName = getActiveColor(prod);
+                  const activeColorGroup =
+                    prod.colors.find(
+                      (c) => getColorName(c).toLowerCase() === activeColorName.toLowerCase()
+                    ) || prod.colors[0];
+                  const totalSizesCount = prod.colors.reduce((sum, c) => sum + (c.sizes?.length || 0), 0);
+
+                  return (
+                    <Card
+                      key={prod.productId || prod.productName}
+                      className={cn(
+                        "border border-border/80 shadow-xs transition-all overflow-hidden",
+                        isExpanded ? "ring-1 ring-primary/20 bg-card" : "hover:border-primary/40 bg-card/60"
+                      )}
+                    >
+                      {/* Product Header / Bar */}
+                      <div
+                        onClick={() => toggleProductExpand(prod.productId, pIdx)}
+                        className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer select-none hover:bg-muted/20 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="size-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            {isExpanded ? (
+                              <ChevronDown className="size-5" />
+                            ) : (
+                              <ChevronRight className="size-5" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-sm sm:text-base text-foreground truncate">
+                              {prod.productName}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              <Badge variant="secondary" className="text-[11px] font-medium h-5 px-2">
+                                <Palette className="size-3 mr-1 text-primary" /> {prod.colors.length} màu sắc
+                              </Badge>
+                              <Badge variant="outline" className="text-[11px] font-medium h-5 px-2">
+                                {totalSizesCount} biến thể size (SKU)
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Stock Summary Metrics */}
+                        <div className="flex items-center gap-5 shrink-0 text-xs w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-border/50">
+                          <div className="text-center sm:text-right">
+                            <div className="text-muted-foreground text-[11px]">Kho thực tế</div>
+                            <div className="font-bold text-foreground text-sm">
+                              {prod.quantityOnHand.toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="text-center sm:text-right">
+                            <div className="text-muted-foreground text-[11px]">Đã giữ đơn</div>
+                            <div className="font-medium text-amber-600 text-sm">
+                              {prod.quantityReserved.toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="text-center sm:text-right">
+                            <div className="text-muted-foreground text-[11px]">Khả dụng</div>
+                            <div className="font-extrabold text-emerald-600 text-sm">
+                              {prod.availableStock.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Drilldown Content */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 pt-1 border-t border-border/60 bg-muted/10 space-y-3">
+                          {/* Level 2: Color selector tabs */}
+                          <div className="pt-2">
+                            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                              <Palette className="size-3.5 text-primary" /> Chọn màu sắc để xem và chỉnh sửa size:
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {prod.colors.map((colorGroup, cIdx) => {
+                                const cName = getColorName(colorGroup);
+                                const isSelected =
+                                  cName.toLowerCase() === activeColorName.toLowerCase();
+                                return (
+                                  <button
+                                    key={cName || cIdx}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectColor(prod.productId, cName);
+                                    }}
+                                    className={cn(
+                                      "flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer",
+                                      isSelected
+                                        ? "bg-primary text-primary-foreground border-primary shadow-xs ring-1 ring-primary"
+                                        : "bg-card hover:bg-muted/60 border-border text-foreground hover:border-primary/40"
+                                    )}
+                                  >
+                                    {colorGroup.colorHex && (
+                                      <span
+                                        className={cn(
+                                          "size-3 rounded-full border shrink-0 shadow-2xs",
+                                          isSelected ? "border-white/60" : "border-black/20"
+                                        )}
+                                        style={{ backgroundColor: colorGroup.colorHex }}
+                                      />
+                                    )}
+                                    <span className="font-semibold">{cName || "Màu sắc"}</span>
+                                    <span
+                                      className={cn(
+                                        "text-[10px] px-1.5 py-0.5 rounded font-normal",
+                                        isSelected
+                                          ? "bg-primary-foreground/20 text-primary-foreground"
+                                          : "bg-muted text-muted-foreground"
+                                      )}
+                                    >
+                                      {colorGroup.sizes?.length || 0} size • {colorGroup.availableStock} tồn
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Level 3: Size Table of Active Color */}
+                          {activeColorGroup && (
+                            <div className="border border-border/70 rounded-lg bg-card overflow-hidden shadow-xs mt-2">
+                              <div className="bg-muted/40 px-4 py-2 border-b border-border/70 flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="text-muted-foreground">Kích cỡ của màu:</span>
+                                  <Badge variant="outline" className="font-bold flex items-center gap-1.5 bg-background">
+                                    {activeColorGroup.colorHex && (
+                                      <span
+                                        className="size-2.5 rounded-full border border-black/20 shrink-0"
+                                        style={{ backgroundColor: activeColorGroup.colorHex }}
+                                      />
+                                    )}
+                                    <span>{getColorName(activeColorGroup) || "Màu sắc"}</span>
+                                  </Badge>
+                                  <span className="text-muted-foreground">•</span>
+                                  <span className="text-foreground font-medium">
+                                    {activeColorGroup.sizes?.length || 0} kích cỡ
+                                  </span>
+                                </div>
+                                <div className="text-xs text-muted-foreground flex items-center gap-3">
+                                  <span>Kho: <strong className="text-foreground">{activeColorGroup.quantityOnHand}</strong></span>
+                                  <span>Đã giữ: <strong className="text-amber-600">{activeColorGroup.quantityReserved}</strong></span>
+                                  <span>Khả dụng: <strong className="text-emerald-600 font-extrabold">{activeColorGroup.availableStock}</strong></span>
+                                </div>
+                              </div>
+
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                  <thead className="bg-muted/20 border-b border-border text-[11px] uppercase font-bold text-muted-foreground">
+                                    <tr>
+                                      <th className="py-2.5 px-4 w-20">Kích cỡ</th>
+                                      <th className="py-2.5 px-4">Mã SKU</th>
+                                      <th className="py-2.5 px-4 text-center">Kho thực tế (OnHand)</th>
+                                      <th className="py-2.5 px-4 text-center">Đã giữ đơn (Reserved)</th>
+                                      <th className="py-2.5 px-4 text-center">Khả dụng (Available)</th>
+                                      <th className="py-2.5 px-4 text-right w-44">Thao tác</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-border/60">
+                                    {activeColorGroup.sizes.map((item) => (
+                                      <tr key={item.variantId} className="hover:bg-muted/30 transition-colors">
+                                        <td className="py-2.5 px-4">
+                                          <Badge variant="secondary" className="font-bold text-xs px-2.5">
+                                            Size {item.size}
+                                          </Badge>
+                                        </td>
+                                        <td className="py-2.5 px-4 font-mono font-bold text-primary">
+                                          {item.sku}
+                                        </td>
+                                        <td className="py-2.5 px-4 text-center font-semibold">
+                                          {item.quantityOnHand}
+                                        </td>
+                                        <td className="py-2.5 px-4 text-center font-medium text-amber-600">
+                                          {item.quantityReserved}
+                                        </td>
+                                        <td className="py-2.5 px-4 text-center font-extrabold text-emerald-600">
+                                          {item.availableStock}
+                                        </td>
+                                        <td className="py-2.5 px-4 text-right space-x-1.5">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleOpenRestock(item)}
+                                            className="h-7 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                          >
+                                            <Plus className="size-3 mr-1" /> Restock
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => handleOpenAdjust(item)}
+                                            className="h-7 text-xs font-medium text-slate-600 hover:text-foreground"
+                                          >
+                                            <Edit3 className="size-3 mr-1" /> Sửa
+                                          </Button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })
+              )}
+
+              <AdminPagination
+                page={page}
+                pageSize={10}
+                totalCount={data?.totalCount || 0}
+                totalPages={data?.totalPages || 1}
+                onPageChange={setPage}
+              />
+            </div>
+          ) : (
+            /* Flat SKU Table View (Legacy full dump option) */
+            <Card className="border border-border/80 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-muted/50 border-b border-border text-xs uppercase font-bold text-muted-foreground">
+                    <tr>
+                      <th className="py-3.5 px-4">SKU</th>
+                      <th className="py-3.5 px-4">Sản phẩm</th>
+                      <th className="py-3.5 px-4">Biến thể</th>
+                      <th className="py-3.5 px-4 text-center">Kho thực tế (OnHand)</th>
+                      <th className="py-3.5 px-4 text-center">Đã giữ đơn (Reserved)</th>
+                      <th className="py-3.5 px-4 text-center">Khả dụng (Available)</th>
+                      <th className="py-3.5 px-4 text-right">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                          Đang tải dữ liệu tồn kho...
+                        </td>
+                      </tr>
+                    ) : !data?.items || data.items.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                          Không tìm thấy sản phẩm tồn kho nào khớp với bộ lọc.
+                        </td>
+                      </tr>
+                    ) : (
+                      data.items.map((item) => (
+                        <tr key={item.variantId} className="hover:bg-muted/30 transition-colors">
+                          <td className="py-3.5 px-4 font-mono font-bold text-xs text-primary">
+                            {item.sku}
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold">{item.productName}</td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <Badge variant="outline" className="font-normal flex items-center gap-1.5 px-2 py-0.5">
+                                {item.colorHex && (
+                                  <span
+                                    className="size-3 rounded-full border border-black/20 shrink-0 shadow-xs"
+                                    style={{ backgroundColor: item.colorHex }}
+                                    title={`Mã màu: ${item.colorHex}`}
+                                  />
+                                )}
+                                <span>{item.color}</span>
+                              </Badge>
+                              <Badge variant="secondary" className="font-bold">
+                                {item.size}
+                              </Badge>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-bold">{item.quantityOnHand}</td>
+                          <td className="py-3.5 px-4 text-center font-medium text-amber-600">
+                            {item.quantityReserved}
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-extrabold text-emerald-600">
+                            {item.availableStock}
+                          </td>
+                          <td className="py-3.5 px-4 text-right space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenRestock(item)}
+                              className="h-8 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                            >
+                              <Plus className="size-3.5 mr-1" /> Restock
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleOpenAdjust(item)}
+                              className="h-8 text-xs font-medium text-slate-600 hover:text-foreground"
+                            >
+                              <Edit3 className="size-3.5 mr-1" /> Sửa
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <AdminPagination
+                page={page}
+                pageSize={10}
+                totalCount={data?.totalCount || 0}
+                totalPages={data?.totalPages || 1}
+                onPageChange={setPage}
+              />
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="transactions">

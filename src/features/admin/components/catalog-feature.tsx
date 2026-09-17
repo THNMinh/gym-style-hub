@@ -991,13 +991,13 @@ export function CatalogFeature() {
                                 <div className="font-mono font-bold text-primary">{v.sku}</div>
                                 <div className="text-muted-foreground flex items-center gap-2">
                                   <span>{formatPrice(v.price)}</span>
-                                  {v.originalPrice && (
+                                  {v.originalPrice != null && v.originalPrice > 0 ? (
                                     <span className="line-through text-[11px] text-muted-foreground/80">
                                       {formatPrice(v.originalPrice)}
                                     </span>
-                                  )}
+                                  ) : null}
                                   <span className="text-border">|</span>
-                                  <span className="text-[11px]">Tồn khả dụng: <strong className="text-foreground">{v.availableStock ?? 0}</strong></span>
+                                  <span className="text-[11px]">Tồn khả dụng: <strong className="text-foreground">{v.availableStock ?? v.available ?? 0}</strong></span>
                                 </div>
                               </div>
                             </div>
