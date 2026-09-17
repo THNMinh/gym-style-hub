@@ -226,7 +226,7 @@ export function AccountFeature() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-border/80 rounded-2xl p-6 bg-card shadow-sm">
         <div className="flex items-center gap-4">
           <div className="size-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-2xl border border-primary/20">
-            {user.fullName ? user.fullName[0].toUpperCase() : user.email[0].toUpperCase()}
+            {(user.fullName?.charAt(0) || user.email?.charAt(0) || "U").toUpperCase()}
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-foreground">

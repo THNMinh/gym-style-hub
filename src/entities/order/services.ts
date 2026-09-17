@@ -156,6 +156,7 @@ export async function getMyOrdersApi(
 export async function getOrderByIdApi(orderId: string): Promise<OrderDetailDto> {
   if (useMockData) {
     const found = MOCK_ORDERS.find((o) => o.orderId === orderId || o.orderCode === orderId) ?? MOCK_ORDERS[0];
+    if (!found) throw new Error("Mock order not found");
     return mock({
       orderId: found.orderId,
       orderCode: found.orderCode,
@@ -193,6 +194,7 @@ export async function getOrderByIdApi(orderId: string): Promise<OrderDetailDto> 
 export async function getOrderTrackingApi(orderId: string): Promise<OrderTrackingHistoryDto[]> {
   if (useMockData) {
     const found = MOCK_ORDERS.find((o) => o.orderId === orderId || o.orderCode === orderId) ?? MOCK_ORDERS[0];
+    if (!found) throw new Error("Mock order not found");
     return mock(
       found.tracking.map((t) => ({
         trackingId: t.trackingId,

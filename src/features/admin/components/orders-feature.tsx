@@ -19,6 +19,7 @@ import {
   shipOrderApi,
   updateOrderStatusAdminApi,
 } from "@/entities/admin/services";
+import type { AdminOrderItem } from "@/entities/admin/types";
 import { ORDER_STATUS_LABEL, PAYMENT_METHOD_LABEL } from "@/entities/order/types";
 import { formatPrice } from "@/shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -253,13 +254,13 @@ export function OrdersFeature() {
                   </td>
                 </tr>
               ) : (
-                orders.map((order) => {
+                orders.map((order: AdminOrderItem) => {
                   return (
                     <tr key={order.orderId} className="hover:bg-muted/30 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-extrabold text-xs text-primary whitespace-nowrap">
                         {order.orderCode}
                       </td>
-                      <td className="py-3.5 px-4 font-medium whitespace-nowrap">{order.userEmail || order.customerEmail || "N/A"}</td>
+                      <td className="py-3.5 px-4 font-medium whitespace-nowrap">{order.userEmail || "N/A"}</td>
                       <td className="py-3.5 px-4 font-bold text-foreground whitespace-nowrap">
                         {formatPrice(order.totalAmount)}
                       </td>

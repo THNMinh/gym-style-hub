@@ -22,8 +22,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const payload = accessToken ? parseJwtPayload(accessToken) : null;
   const tokenRole =
     payload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
-    payload?.role ||
-    payload?.Role;
+    payload?.["role"] ||
+    payload?.["Role"];
 
   // Chuỗi Role Admin chính xác trong hệ thống: "Admin" (hoặc không phân biệt hoa thường "admin")
   const isAdmin = Boolean(

@@ -102,7 +102,7 @@ export function ProductReviews({ productId }: { productId: string }) {
       list = list.filter(
         (r) =>
           r.comment?.toLowerCase().includes(q) ||
-          r.userFullName.toLowerCase().includes(q)
+          (r.userFullName || r.authorName || "").toLowerCase().includes(q)
       );
     }
 
@@ -552,11 +552,11 @@ export function ProductReviews({ productId }: { productId: string }) {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2.5">
                     <div className="size-9 rounded-full bg-primary/10 text-primary font-black text-xs flex items-center justify-center uppercase shrink-0">
-                      {review.userFullName.slice(0, 2)}
+                      {(review.userFullName || review.authorName || "GK").slice(0, 2)}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-foreground truncate">
-                        {review.userFullName}
+                        {review.userFullName || review.authorName || "Khách hàng"}
                       </p>
                       <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                         <CheckCircle2 className="size-3 text-emerald-500 shrink-0" />

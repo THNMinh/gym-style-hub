@@ -18,7 +18,8 @@ export interface ReviewItemDto {
   productId: string;
   productName?: string;
   userId: string;
-  userFullName: string;
+  userFullName?: string;
+  authorName?: string;
   customerEmail?: string;
   customerFullName?: string;
   orderId?: string;
@@ -30,6 +31,8 @@ export interface ReviewItemDto {
   mediaList?: ReviewMedia[];
   medias?: ReviewMedia[];
 }
+
+export type ProductReview = ReviewItemDto;
 
 export interface RatingBreakdown {
   fiveStar: number;

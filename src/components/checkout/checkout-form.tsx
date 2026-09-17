@@ -26,7 +26,7 @@ import {
 } from "@/lib/validations/checkout";
 
 interface CheckoutFormProps {
-  couponCode?: string | null;
+  couponCode?: string | null | undefined;
 }
 
 export function CheckoutForm({ couponCode }: CheckoutFormProps) {

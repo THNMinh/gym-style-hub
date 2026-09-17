@@ -56,7 +56,7 @@ export default function CheckoutPage() {
       {/* Two Column Layout: Form on Left, Cart Summary on Right */}
       <div className="grid gap-10 lg:grid-cols-[1fr_420px]">
         <div>
-          <CheckoutForm couponCode={appliedCoupon?.code} />
+          <CheckoutForm couponCode={appliedCoupon?.code ?? null} />
         </div>
         <div className="lg:sticky lg:top-28 h-fit">
           <CartSummary onCouponApplied={(res) => setAppliedCoupon(res)} />

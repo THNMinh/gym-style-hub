@@ -101,14 +101,16 @@ export async function updateAddressApi(
 ): Promise<UserAddress> {
   if (useMockData) {
     const idx = MOCK_ADDRESSES.findIndex((a) => a.addressId === addressId);
-    if (idx !== -1) {
+    const current = idx !== -1 ? MOCK_ADDRESSES[idx] : undefined;
+    if (idx !== -1 && current) {
       if (payload.isDefault) {
         MOCK_ADDRESSES.forEach((a) => (a.isDefault = false));
       }
-      MOCK_ADDRESSES[idx] = { ...MOCK_ADDRESSES[idx], ...payload };
-      return mock(MOCK_ADDRESSES[idx]);
+      const updated: UserAddress = { ...current, ...payload };
+      MOCK_ADDRESSES[idx] = updated;
+      return mock(updated);
     }
-    return mock({ addressId, ...payload });
+    return mock({ addressId, ...payload } as UserAddress);
   }
 
   return request<UserAddress>(`/api/user/addresses/${addressId}`, {

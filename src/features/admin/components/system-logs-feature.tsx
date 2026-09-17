@@ -321,7 +321,7 @@ export function SystemLogsFeature() {
                   <p className="text-muted-foreground font-semibold">Tài khoản thực hiện (Email):</p>
                   <p className="font-bold text-primary flex items-center gap-1.5 mt-0.5 text-sm">
                     <UserCheck className="size-4 text-emerald-500 shrink-0" />
-                    {"userEmail" in logDetail && logDetail.userEmail ? logDetail.userEmail : "Hệ thống (System Job / Guest)"}
+                    {(logDetail as Record<string, any>)["userEmail"] ? String((logDetail as Record<string, any>)["userEmail"]) : "Hệ thống (System Job / Guest)"}
                   </p>
                   {logDetail.userId && (
                     <p className="font-mono text-[11px] text-muted-foreground mt-1">

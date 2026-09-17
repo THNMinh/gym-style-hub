@@ -6,8 +6,8 @@ import { formatPrice } from "@/shared/lib/format";
 
 export const Route = createFileRoute("/orders/success")({
   validateSearch: (search: Record<string, unknown>) => ({
-    orderCode: (search.orderCode as string) || "GK-SUCCESS",
-    total: search.total ? Number(search.total) : null,
+    orderCode: (search["orderCode"] as string) || "GK-SUCCESS",
+    total: search["total"] ? Number(search["total"]) : null,
   }),
   component: OrderSuccessPage,
 });

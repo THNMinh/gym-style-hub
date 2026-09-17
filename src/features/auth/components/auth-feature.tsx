@@ -29,7 +29,13 @@ export function AuthFeature() {
   const setSession = useAuthStore((s) => s.setSession);
 
   // Extract optional search params (e.g. ?redirect=/checkout, ?mode=verify-otp, ?email=...)
-  const searchParams = new URLSearchParams(location.search);
+  const searchParams = new URLSearchParams(
+    typeof location.search === "string"
+      ? location.search
+      : typeof window !== "undefined"
+        ? window.location.search
+        : ""
+  );
   const redirectUrl = searchParams.get("redirect");
   const initialMode = (searchParams.get("mode") as "login" | "register" | "verify-otp" | "forgot-password") || "login";
   const initialEmail = searchParams.get("email") || "";

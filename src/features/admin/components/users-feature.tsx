@@ -195,7 +195,9 @@ export function UsersFeature() {
   const getInitials = (name?: string | null, email?: string) => {
     if (name && name.trim()) {
       const parts = name.trim().split(" ");
-      if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      const first = parts[0]?.charAt(0) || "";
+      const last = parts[parts.length - 1]?.charAt(0) || "";
+      if (first && last) return `${first}${last}`.toUpperCase();
       return name.slice(0, 2).toUpperCase();
     }
     return email ? email.slice(0, 2).toUpperCase() : "GK";

@@ -12,8 +12,8 @@ export function AdminReturnBar() {
   const payload = accessToken ? parseJwtPayload(accessToken) : null;
   const tokenRole =
     payload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
-    payload?.role ||
-    payload?.Role;
+    payload?.["role"] ||
+    payload?.["Role"];
 
   const isAdmin = Boolean(
     accessToken &&

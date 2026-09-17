@@ -139,16 +139,17 @@ export function InventoryFeature() {
         (c) => getColorName(c).toLowerCase() === itemColor.toLowerCase()
       );
       if (!cGroup) {
-        cGroup = {
+        const newGroup: ColorInventoryGroup = {
           color: itemColor,
           colorName: itemColor,
-          colorHex: item.colorHex,
+          colorHex: item.colorHex ?? null,
           quantityOnHand: 0,
           quantityReserved: 0,
           availableStock: 0,
           sizes: [],
         };
-        prod.colors.push(cGroup);
+        prod.colors.push(newGroup);
+        cGroup = newGroup;
       }
       cGroup.quantityOnHand += item.quantityOnHand || 0;
       cGroup.quantityReserved += item.quantityReserved || 0;
@@ -191,14 +192,16 @@ export function InventoryFeature() {
   };
 
   const getActiveColor = (prod: ProductInventoryGroup) => {
-    if (selectedColors[prod.productId]) {
-      const target = selectedColors[prod.productId].toLowerCase();
+    const sel = selectedColors[prod.productId];
+    if (sel) {
+      const target = sel.toLowerCase();
       const match = prod.colors.find(
         (c) => getColorName(c).toLowerCase() === target
       );
       if (match) return getColorName(match);
     }
-    return prod.colors[0] ? getColorName(prod.colors[0]) : "";
+    const firstCol = prod.colors[0];
+    return firstCol ? getColorName(firstCol) : "";
   };
 
   const handleSelectColor = (productId: string, color: string) => {

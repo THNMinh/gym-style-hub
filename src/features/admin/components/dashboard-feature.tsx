@@ -21,6 +21,7 @@ import {
   getCategoriesApi,
   getFinanceTransactionsApi,
 } from "@/entities/admin/services";
+import type { AdminOrderItem } from "@/entities/admin/types";
 import { ORDER_STATUS_LABEL } from "@/entities/order/types";
 
 export function DashboardFeature() {
@@ -61,17 +62,17 @@ export function DashboardFeature() {
   const transactions = financeQuery.data?.items || [];
 
   // KPI Calculations
-  const totalRevenue = orders.reduce((sum, o) => {
+  const totalRevenue = orders.reduce((sum: number, o: AdminOrderItem) => {
     return o.paymentStatus === "Paid" || o.currentStatus === "Delivered" || o.currentStatus === "Shipped"
       ? sum + (o.totalAmount || 0)
       : sum;
   }, 0);
 
   const processingOrdersCount = orders.filter(
-    (o) => o.currentStatus === "Pending" || o.currentStatus === "Processing"
+    (o: AdminOrderItem) => o.currentStatus === "Pending" || o.currentStatus === "Processing"
   ).length;
 
-  const shippedOrdersCount = orders.filter((o) => o.currentStatus === "Shipped").length;
+  const shippedOrdersCount = orders.filter((o: AdminOrderItem) => o.currentStatus === "Shipped").length;
 
   const lowStockItems = inventoryItems.filter(
     (i) => (i.availableStock ?? i.quantityOnHand ?? 0) <= 15
@@ -256,7 +257,7 @@ export function DashboardFeature() {
             {orders.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">Chưa có dữ liệu vận hành đơn hàng.</p>
             ) : (
-              orders.slice(0, 5).map((ord) => (
+              orders.slice(0, 5).map((ord: AdminOrderItem) => (
                 <div key={ord.orderId} className="flex items-center justify-between border-b border-border/60 pb-3 last:border-b-0 last:pb-0">
                   <div className="space-y-0.5">
                     <p className="font-bold text-foreground flex items-center gap-2">

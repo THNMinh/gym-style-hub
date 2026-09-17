@@ -2,14 +2,14 @@ import { env, useMockData } from "@/core/config/env";
 import { useAuthStore } from "@/features/auth/store";
 
 export class ApiError extends Error {
-  public code?: string;
-  public data?: unknown;
+  public code?: string | undefined;
+  public data?: unknown | undefined;
 
   constructor(
     message: string,
     public status: number,
-    code?: string,
-    data?: unknown,
+    code?: string | undefined,
+    data?: unknown | undefined,
   ) {
     super(message);
     this.name = "ApiError";

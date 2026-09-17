@@ -1731,11 +1731,11 @@ export function CatalogFeature() {
                                 setEditingGuideId(item.guideId);
                                 setGuideSize(item.size);
 
-                                const parseStrRange = (str?: string) => {
-                                  if (!str) return { min: "" as const, max: "" as const };
+                                const parseStrRange = (str?: string): { min: number | ""; max: number | "" } => {
+                                  if (!str) return { min: "", max: "" };
                                   const parts = str.split("-").map((p) => p.trim());
-                                  const min = parts[0] && !isNaN(Number(parts[0])) ? Number(parts[0]) : "";
-                                  const max = parts[1] && !isNaN(Number(parts[1])) ? Number(parts[1]) : "";
+                                  const min: number | "" = parts[0] && !isNaN(Number(parts[0])) ? Number(parts[0]) : "";
+                                  const max: number | "" = parts[1] && !isNaN(Number(parts[1])) ? Number(parts[1]) : "";
                                   return { min, max };
                                 };
 
