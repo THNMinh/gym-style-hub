@@ -14,6 +14,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as FeaturedRouteImport } from './routes/featured'
 import { Route as WishlistRouteImport } from './routes/wishlist'
 import { Route as AdminCatalogRouteImport } from './routes/admin/catalog'
 import { Route as AdminCouponsRouteImport } from './routes/admin/coupons'
@@ -52,6 +53,11 @@ const CartRoute = CartRouteImport.update({
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeaturedRoute = FeaturedRouteImport.update({
+  id: '/featured',
+  path: '/featured',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WishlistRoute = WishlistRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/featured': typeof FeaturedRoute
   '/wishlist': typeof WishlistRoute
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/coupons': typeof AdminCouponsRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/featured': typeof FeaturedRoute
   '/wishlist': typeof WishlistRoute
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/coupons': typeof AdminCouponsRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/featured': typeof FeaturedRoute
   '/wishlist': typeof WishlistRoute
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/coupons': typeof AdminCouponsRoute
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/featured'
     | '/wishlist'
     | '/admin/catalog'
     | '/admin/coupons'
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/featured'
     | '/wishlist'
     | '/admin/catalog'
     | '/admin/coupons'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/featured'
     | '/wishlist'
     | '/admin/catalog'
     | '/admin/coupons'
@@ -261,6 +273,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
+  FeaturedRoute: typeof FeaturedRoute
   WishlistRoute: typeof WishlistRoute
   AdminCatalogRoute: typeof AdminCatalogRoute
   AdminCouponsRoute: typeof AdminCouponsRoute
@@ -312,6 +325,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout'
       fullPath: '/checkout'
       preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/featured': {
+      id: '/featured'
+      path: '/featured'
+      fullPath: '/featured'
+      preLoaderRoute: typeof FeaturedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/wishlist': {
@@ -421,6 +441,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
+  FeaturedRoute: FeaturedRoute,
   WishlistRoute: WishlistRoute,
   AdminCatalogRoute: AdminCatalogRoute,
   AdminCouponsRoute: AdminCouponsRoute,

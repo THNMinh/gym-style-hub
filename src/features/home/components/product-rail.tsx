@@ -28,8 +28,8 @@ export function ProductRail({
       <div className="mb-8 flex items-end justify-between">
         <h2 className="text-2xl md:text-3xl">{title}</h2>
         <Link
-          to="/products"
-          search={gender ? { gender } : {}}
+          to={title === "Bán chạy nhất" ? "/featured" : "/products"}
+          search={title === "Bán chạy nhất" ? {} : (gender ? { gender } : {})}
           className="eyebrow underline underline-offset-4"
         >
           Xem tất cả

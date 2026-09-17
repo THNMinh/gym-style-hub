@@ -66,6 +66,13 @@ export function SiteHeader() {
           <SheetContent side="left" className="w-72">
             <SheetTitle className="text-lg">Danh mục</SheetTitle>
             <nav className="mt-6 flex flex-col gap-1">
+              <Link
+                to="/featured"
+                onClick={() => setOpen(false)}
+                className="border-b border-border py-3 font-display text-lg font-extrabold uppercase"
+              >
+                Sản phẩm nổi bật
+              </Link>
               {NAV.map((item) => (
                 <Link
                   key={item.gender}
@@ -86,6 +93,13 @@ export function SiteHeader() {
         </Link>
 
         <nav className="ml-6 hidden items-center gap-6 lg:flex">
+          <Link
+            to="/featured"
+            className="eyebrow transition-colors hover:text-muted-foreground"
+            activeProps={{ className: "underline underline-offset-8" }}
+          >
+            Sản phẩm nổi bật
+          </Link>
           {NAV.map((item) => (
             <Link
               key={item.gender}

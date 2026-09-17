@@ -280,6 +280,13 @@ function filterProducts(query: ProductListQuery): Product[] {
       const sizes = new Set(product.variants.filter((v) => v.available > 0).map((v) => v.size.toUpperCase()));
       if (!query.sizes.some((s) => sizes.has(s.toUpperCase()))) return false;
     }
+    if (query.minDiscountPercent != null && query.minDiscountPercent > 0) {
+      const hasDiscount = product.variants.some((v) => {
+        if (!v.originalPrice || v.originalPrice <= 0) return false;
+        return ((v.originalPrice - v.price) / v.originalPrice) * 100 >= query.minDiscountPercent!;
+      });
+      if (!hasDiscount) return false;
+    }
     return true;
   });
 }
@@ -320,6 +327,8 @@ export async function getProducts(query: ProductListQuery = {}): Promise<PagedRe
   if (query.sizes?.length) params.set("sizes", query.sizes.join(","));
   if (query.minPrice != null) params.set("minPrice", String(query.minPrice));
   if (query.maxPrice != null) params.set("maxPrice", String(query.maxPrice));
+  if (query.minDiscountPercent != null) params.set("minDiscountPercent", String(query.minDiscountPercent));
+  if (query.sort) params.set("sort", query.sort);
   params.set("isActive", "true");
   params.set("page", String(query.page ?? 1));
   params.set("pageSize", String(query.pageSize ?? 24));

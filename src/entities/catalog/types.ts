@@ -74,6 +74,7 @@ export interface ProductListQuery {
   pageSize?: number;
   minPrice?: number;
   maxPrice?: number;
+  minDiscountPercent?: number;
 }
 
 export interface PagedResult<T> {
