@@ -307,9 +307,17 @@ export function CouponsFeature() {
                           <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs px-2 py-0.5 font-bold">
                             Hoạt động
                           </Badge>
+                        ) : c.endDate && new Date(c.endDate) < new Date() ? (
+                          <Badge className="bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30 text-xs px-2 py-0.5 font-bold" title="Tự động vô hiệu hóa bởi Hangfire do quá hạn">
+                            Hết hạn
+                          </Badge>
+                        ) : c.usageLimit != null && (c.usedCount ?? 0) >= c.usageLimit ? (
+                          <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-xs px-2 py-0.5 font-bold" title="Tự động vô hiệu hóa bởi Hangfire do hết số lượt sử dụng">
+                            Hết lượt
+                          </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-muted-foreground text-xs px-2 py-0.5">
-                            Tạm dừng
+                          <Badge variant="outline" className="text-muted-foreground text-xs px-2 py-0.5 font-semibold">
+                            Vô hiệu hóa
                           </Badge>
                         )}
                       </td>

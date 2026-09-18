@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -24,6 +24,7 @@ import { WriteOrderReviewModal } from "@/features/order/components/write-order-r
 import { toast } from "sonner";
 import { useAuthStore } from "@/features/auth/store";
 import { AuthFeature } from "@/features/auth/components/auth-feature";
+import { signalRService } from "@/features/notification/services/signalr-service";
 
 export const Route = createFileRoute("/orders/$orderId")({
   component: OrderDetailPage,
@@ -54,6 +55,37 @@ function OrderDetailPage() {
     queryFn: () => getOrderTrackingApi(orderId),
     enabled: !!orderId && !!user,
   });
+
+  // Live Tracking listener via SignalR
+  useEffect(() => {
+    if (!orderId) return;
+
+    const unsub = signalRService.onOrderTrackingUpdated((payload) => {
+      if (payload.orderId?.toLowerCase() === orderId.toLowerCase()) {
+        toast.info(`📍 Cập nhật tiến trình: ${payload.title}`, {
+          description: payload.description || `Trạng thái: ${payload.status}`,
+        });
+
+        queryClient.setQueryData(["client-order-tracking", orderId], (prev: any) => {
+          if (!Array.isArray(prev)) return [payload];
+          if (prev.some((item) => item.trackingId === payload.trackingId)) return prev;
+          return [payload, ...prev];
+        });
+
+        queryClient.setQueryData(["client-order-detail", orderId], (prev: any) =>
+          prev ? { ...prev, currentStatus: payload.status } : prev
+        );
+
+        queryClient.invalidateQueries({ queryKey: ["client-order-tracking", orderId] });
+        queryClient.invalidateQueries({ queryKey: ["client-order-detail", orderId] });
+        queryClient.invalidateQueries({ queryKey: ["my-orders"] });
+      }
+    });
+
+    return () => {
+      unsub();
+    };
+  }, [orderId, queryClient]);
 
   // Cancel Mutation
   const cancelMutation = useMutation({

@@ -420,7 +420,32 @@ export function CatalogFeature() {
       queryClient.invalidateQueries({ queryKey: ["admin-variants-by-color", variantProduct?.productId] });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
     },
-    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+    onError: (err: any) => {
+      const msg = err?.message || "Thêm biến thể thất bại";
+      const code = err?.code || "";
+      const isSkuConflict =
+        code.includes("SkuAlreadyExists") ||
+        msg.toLowerCase().includes("sku") ||
+        code.includes("Conflict");
+      const isDuplicateVariant =
+        code.includes("DuplicateColorAndSize") ||
+        msg.toLowerCase().includes("màu sắc và kích cỡ") ||
+        msg.toLowerCase().includes("kích cỡ này");
+
+      if (isSkuConflict) {
+        variantForm.setError("sku", {
+          type: "manual",
+          message: msg,
+        });
+      } else if (isDuplicateVariant) {
+        variantForm.setError("size", {
+          type: "manual",
+          message: msg,
+        });
+      }
+
+      toast.error(`Lỗi: ${msg}`);
+    },
   });
 
   const updateVariantMutation = useMutation({
@@ -433,7 +458,32 @@ export function CatalogFeature() {
       queryClient.invalidateQueries({ queryKey: ["admin-variants-by-color", variantProduct?.productId] });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
     },
-    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+    onError: (err: any) => {
+      const msg = err?.message || "Cập nhật biến thể thất bại";
+      const code = err?.code || "";
+      const isSkuConflict =
+        code.includes("SkuAlreadyExists") ||
+        msg.toLowerCase().includes("sku") ||
+        code.includes("Conflict");
+      const isDuplicateVariant =
+        code.includes("DuplicateColorAndSize") ||
+        msg.toLowerCase().includes("màu sắc và kích cỡ") ||
+        msg.toLowerCase().includes("kích cỡ này");
+
+      if (isSkuConflict) {
+        variantForm.setError("sku", {
+          type: "manual",
+          message: msg,
+        });
+      } else if (isDuplicateVariant) {
+        variantForm.setError("size", {
+          type: "manual",
+          message: msg,
+        });
+      }
+
+      toast.error(`Lỗi: ${msg}`);
+    },
   });
 
   const deleteVariantMutation = useMutation({
@@ -444,7 +494,7 @@ export function CatalogFeature() {
       queryClient.invalidateQueries({ queryKey: ["admin-variants-by-color", variantProduct?.productId] });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
     },
-    onError: (err: Error) => toast.error(`Lỗi: ${err.message}`),
+    onError: (err: any) => toast.error(`Lỗi: ${err?.message || "Không thể xóa biến thể này"}`),
   });
 
   // Form Hooks
@@ -1252,7 +1302,10 @@ export function CatalogFeature() {
                       <div className="space-y-1">
                         <Input
                           id="var-size-custom"
-                          className="h-9 text-xs font-bold"
+                          className={cn(
+                            "h-9 text-xs font-bold",
+                            variantForm.formState.errors.size && "border-destructive focus-visible:ring-destructive"
+                          )}
                           placeholder="Nhập kích cỡ (VD: Freesize, One Size, 700ml...)"
                           {...variantForm.register("size", {
                             onChange: (e) => {
@@ -1289,7 +1342,14 @@ export function CatalogFeature() {
                         <RefreshCw className="size-3" /> Tự sinh lại SKU
                       </button>
                     </div>
-                    <Input id="var-sku" className="h-9 text-xs font-mono font-bold text-primary" {...variantForm.register("sku")} />
+                    <Input
+                      id="var-sku"
+                      className={cn(
+                        "h-9 text-xs font-mono font-bold text-primary",
+                        variantForm.formState.errors.sku && "border-destructive focus-visible:ring-destructive"
+                      )}
+                      {...variantForm.register("sku")}
+                    />
                     {variantForm.formState.errors.sku && (
                       <p className="text-xs text-destructive">{variantForm.formState.errors.sku.message}</p>
                     )}

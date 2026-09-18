@@ -59,7 +59,7 @@ export function FeaturedFeature() {
         image: devantImg,
         badge: "Devant Series",
         filterLabel: "Dòng sản phẩm Devant",
-        query: { gender: "Men", search: "devant" },
+        query: {search: "devant" },
       },
       {
         id: "men-muscle",

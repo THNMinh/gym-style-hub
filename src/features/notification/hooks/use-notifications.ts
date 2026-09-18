@@ -87,6 +87,46 @@ export function useNotifications() {
     [navigate, queryClient]
   );
 
+  const handleNewOrderPlaced = useCallback(
+    (order: import("../services/signalr-service").NewOrderPlacedPayload) => {
+      console.log("🔔 [useNotifications] Đơn hàng mới:", order);
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard-stats"] });
+
+      toast.info(`📦 Đơn hàng mới #${order.orderCode}`, {
+        description: `Khách: ${order.customerName} (${order.customerEmail}) - Tổng: ${order.totalAmount.toLocaleString("vi-VN")} đ (${order.paymentMethod})`,
+        action: {
+          label: "Xem đơn",
+          onClick: () => {
+            try {
+              navigate({ to: "/admin/orders" as any });
+            } catch {
+              window.location.href = "/admin/orders";
+            }
+          },
+        },
+        duration: 8000,
+      });
+
+      try {
+        const audio = new Audio("/sounds/notification.mp3");
+        audio.play().catch(() => {});
+      } catch {}
+    },
+    [navigate, queryClient]
+  );
+
+  const handleOrderTrackingUpdated = useCallback(
+    (tracking: import("../services/signalr-service").OrderTrackingUpdatedPayload) => {
+      console.log("📍 [useNotifications] Cập nhật tiến trình đơn:", tracking);
+      queryClient.invalidateQueries({ queryKey: ["client-order-tracking", tracking.orderId] });
+      queryClient.invalidateQueries({ queryKey: ["client-order-detail", tracking.orderId] });
+      queryClient.invalidateQueries({ queryKey: ["my-orders"] });
+    },
+    [queryClient]
+  );
+
   useEffect(() => {
     if (!accessToken || !user) {
       setNotifications([]);
@@ -97,12 +137,17 @@ export function useNotifications() {
 
     fetchNotifications();
 
+    const unsubOrder = signalRService.onNewOrderPlaced(handleNewOrderPlaced);
+    const unsubTracking = signalRService.onOrderTrackingUpdated(handleOrderTrackingUpdated);
+
     signalRService.startConnection(() => useAuthStore.getState().accessToken, handleIncomingNotification);
 
     return () => {
+      unsubOrder();
+      unsubTracking();
       signalRService.stopConnection();
     };
-  }, [accessToken, user, fetchNotifications, handleIncomingNotification]);
+  }, [accessToken, user, fetchNotifications, handleIncomingNotification, handleNewOrderPlaced, handleOrderTrackingUpdated]);
 
   const markAsRead = async (notificationId: string, targetUrl?: string | null) => {
     try {

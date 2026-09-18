@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -28,6 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { WriteOrderReviewModal } from "./write-order-review-modal";
+import { signalRService } from "@/features/notification/services/signalr-service";
 
 interface OrderTrackingModalProps {
   orderId: string | null;
@@ -56,6 +57,36 @@ export function OrderTrackingModal({ orderId, open, onClose }: OrderTrackingModa
     queryFn: () => (orderId ? getOrderTrackingApi(orderId) : Promise.resolve([])),
     enabled: !!orderId && open,
   });
+
+  // Live Tracking listener via SignalR
+  useEffect(() => {
+    if (!orderId || !open) return;
+
+    const unsub = signalRService.onOrderTrackingUpdated((payload) => {
+      if (payload.orderId?.toLowerCase() === orderId.toLowerCase()) {
+        toast.info(`📍 Tiến trình đơn hàng #${payload.orderCode}: ${payload.title}`, {
+          description: payload.description || `Trạng thái: ${payload.status}`,
+        });
+
+        queryClient.setQueryData(["client-order-tracking", orderId], (prev: any) => {
+          if (!Array.isArray(prev)) return [payload];
+          if (prev.some((item) => item.trackingId === payload.trackingId)) return prev;
+          return [payload, ...prev];
+        });
+
+        queryClient.setQueryData(["client-order-detail", orderId], (prev: any) =>
+          prev ? { ...prev, currentStatus: payload.status } : prev
+        );
+
+        queryClient.invalidateQueries({ queryKey: ["client-order-tracking", orderId] });
+        queryClient.invalidateQueries({ queryKey: ["client-order-detail", orderId] });
+      }
+    });
+
+    return () => {
+      unsub();
+    };
+  }, [orderId, open, queryClient]);
 
   // Cancel Mutation
   const cancelMutation = useMutation({
