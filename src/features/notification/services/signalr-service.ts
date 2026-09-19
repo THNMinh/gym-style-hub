@@ -76,7 +76,7 @@ class SignalRService {
     if (this.isConnecting) return;
     this.isConnecting = true;
 
-    const baseUrl = env.apiBaseUrl || "https://localhost:7191";
+    const baseUrl = env.apiBaseUrl || "https://gymkitten.onrender.com";
     const hubUrl = `${baseUrl.replace(/\/$/, "")}/hubs/notification`;
 
     this.hubConnection = new signalR.HubConnectionBuilder()

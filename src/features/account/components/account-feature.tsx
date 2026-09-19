@@ -25,6 +25,7 @@ import { OrderTrackingModal } from "@/features/order/components/order-tracking-m
 import { WriteOrderReviewModal } from "@/features/order/components/write-order-review-modal";
 import { AdminPagination } from "@/features/admin/components/admin-pagination";
 import { toast } from "sonner";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Package,
   Truck,
@@ -41,6 +42,7 @@ import {
   Check,
   Lock,
   KeyRound,
+  Shield,
 } from "lucide-react";
 import {
   Dialog,
@@ -52,6 +54,7 @@ import {
 } from "@/components/ui/dialog";
 
 export function AccountFeature() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const hydrated = useHydrated();
   const user = useAuthStore((s) => s.user);
@@ -244,9 +247,20 @@ export function AccountFeature() {
           </div>
         </div>
 
-        <Button variant="outline" size="sm" onClick={() => logout()} className="font-bold text-destructive hover:bg-destructive/10">
-          Đăng xuất
-        </Button>
+        <div className="flex items-center gap-2">
+          {(user.role === "Admin" || user.role?.toLowerCase() === "admin") && (
+            <Button
+              size="sm"
+              onClick={() => navigate({ to: "/admin/dashboard" })}
+              className="font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+            >
+              <Shield className="size-4" /> Quản trị Admin CMS
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => logout()} className="font-bold text-destructive hover:bg-destructive/10">
+            Đăng xuất
+          </Button>
+        </div>
       </div>
 
       {/* Main Tabs */}

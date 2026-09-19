@@ -1,5 +1,14 @@
+import axios from "axios";
 import { env, useMockData } from "@/core/config/env";
 import { useAuthStore } from "@/features/auth/store";
+
+export const apiClient = axios.create({
+  baseURL: env.apiBaseUrl,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 export class ApiError extends Error {
   public code?: string | undefined;
