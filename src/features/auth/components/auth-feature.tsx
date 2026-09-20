@@ -280,7 +280,7 @@ export function AuthFeature() {
                   onClick={() => fillDemoAccount("admin")}
                   className={cn(
                     "flex flex-col items-center text-center p-3 rounded-xl border transition-all cursor-pointer group relative overflow-hidden",
-                    form.email === "DavidLaid@gymkitten.com"
+                    form.email.toLowerCase() === "davidlaid@gymkitten.com"
                       ? "border-primary bg-background shadow-sm ring-2 ring-primary/30"
                       : "border-border/70 bg-background hover:border-primary/50 hover:bg-muted/40 hover:shadow-xs"
                   )}
@@ -298,7 +298,7 @@ export function AuthFeature() {
                   onClick={() => fillDemoAccount("customer")}
                   className={cn(
                     "flex flex-col items-center text-center p-3 rounded-xl border transition-all cursor-pointer group relative overflow-hidden",
-                    form.email === "Luan@gymkitten.com"
+                    form.email.toLowerCase() === "luan@gymkitten.com"
                       ? "border-primary bg-background shadow-sm ring-2 ring-primary/30"
                       : "border-border/70 bg-background hover:border-primary/50 hover:bg-muted/40 hover:shadow-xs"
                   )}
