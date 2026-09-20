@@ -118,8 +118,11 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
     ].filter(Boolean);
     const fullAddress = `${values.receiverName} (${values.phoneNumber}) - ${addressParts.join(", ")}`;
 
+    const subTotal = lines.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const shippingFee = subTotal >= env.freeShippingThreshold || subTotal === 0 ? 0 : env.shippingFee;
+
     // Prepare API Payload matching CheckoutCommand schema
-    const payload = {
+    const payload: CheckoutRequest = {
       items: lines.map((item) => ({
         variantId: item.variantId,
         quantity: item.quantity,
@@ -128,6 +131,7 @@ export function CheckoutForm({ couponCode }: CheckoutFormProps) {
       paymentMethod: values.paymentMethod,
       customerNote: values.customerNote?.trim() || null,
       couponCode: couponCode?.trim() || null,
+      shippingFee: shippingFee,
     };
 
     try {

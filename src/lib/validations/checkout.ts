@@ -27,7 +27,9 @@ export interface CheckoutRequest {
   items: CheckoutItemRequest[];
   shippingAddress: string;
   paymentMethod: "COD" | "MOMO";
-  customerNote?: string;
+  customerNote?: string | null;
+  couponCode?: string | null;
+  shippingFee?: number;
 }
 
 export interface CheckoutResponseData {
