@@ -21,7 +21,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { cn } from "@/lib/utils";
-import { Mail, Lock, User, ArrowLeft, RefreshCw, KeyRound, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, RefreshCw, KeyRound, CheckCircle2, ShieldCheck, Crown, Sparkles, UserCheck } from "lucide-react";
 
 export function AuthFeature() {
   const navigate = useNavigate();
@@ -58,6 +58,29 @@ export function AuthFeature() {
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
+
+  // Quick Demo account auto-fill helper (KeyGo-style demo access)
+  const fillDemoAccount = (role: "admin" | "customer") => {
+    if (role === "admin") {
+      setForm((prev) => ({
+        ...prev,
+        email: "davidlaid@gymkitten.com",
+        password: "DavidLaid@123",
+      }));
+      toast.success("Đã điền tài khoản demo!", {
+        description: "Quản trị viên: DavidLaid@gymkitten.com",
+      });
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        email: "luan@gymkitten.com",
+        password: "Luan@123",
+      }));
+      toast.success("Đã điền tài khoản demo!", {
+        description: "Khách hàng: Luan@gymkitten.com",
+      });
+    }
+  };
 
   // Countdown timer for resending OTP
   useEffect(() => {
@@ -238,6 +261,57 @@ export function AuthFeature() {
                 : "Đăng ký thành viên để nhận ngay các đặc quyền mua sắm cao cấp."}
             </p>
           </div>
+
+          {/* KeyGo-style Quick Demo Access */}
+          {mode === "login" && (
+            <div className="rounded-xl border border-primary/20 bg-primary/[0.03] dark:bg-primary/[0.06] p-3.5 space-y-2.5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                  <Sparkles className="size-3.5 text-primary animate-pulse" />
+                  Truy cập nhanh Demo
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium">Bấm để tự động điền</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                {/* Admin demo button */}
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount("admin")}
+                  className={cn(
+                    "flex flex-col items-center text-center p-3 rounded-xl border transition-all cursor-pointer group relative overflow-hidden",
+                    form.email === "DavidLaid@gymkitten.com"
+                      ? "border-primary bg-background shadow-sm ring-2 ring-primary/30"
+                      : "border-border/70 bg-background hover:border-primary/50 hover:bg-muted/40 hover:shadow-xs"
+                  )}
+                >
+                  <div className="size-9 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+                    <Crown className="size-4.5" />
+                  </div>
+                  <span className="text-xs font-bold text-foreground">Quản trị viên</span>
+                  <span className="text-[11px] text-muted-foreground font-medium">Toàn quyền CMS</span>
+                </button>
+
+                {/* Customer demo button */}
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount("customer")}
+                  className={cn(
+                    "flex flex-col items-center text-center p-3 rounded-xl border transition-all cursor-pointer group relative overflow-hidden",
+                    form.email === "Luan@gymkitten.com"
+                      ? "border-primary bg-background shadow-sm ring-2 ring-primary/30"
+                      : "border-border/70 bg-background hover:border-primary/50 hover:bg-muted/40 hover:shadow-xs"
+                  )}
+                >
+                  <div className="size-9 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+                    <UserCheck className="size-4.5" />
+                  </div>
+                  <span className="text-xs font-bold text-foreground">Khách hàng</span>
+                  <span className="text-[11px] text-muted-foreground font-medium">Mua sắm & Đặt hàng</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           <form
             className="space-y-4"
