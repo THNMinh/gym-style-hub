@@ -16,7 +16,7 @@ export function ProductListFeature({
   initialCategory?: string;
   search?: string;
 }) {
-  const PAGE_SIZE = 12;
+  const PAGE_SIZE = 15;
   const [filters, setFilters] = useState<CatalogFilters>({
     ...EMPTY_FILTERS,
     gender: initialGender,
@@ -62,7 +62,7 @@ export function ProductListFeature({
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-10 lg:px-8">
+    <div className="mx-auto max-w-[1800px] px-4 py-10 lg:px-8">
       <header className="mb-8">
         <h1 className="text-4xl md:text-5xl">
           {search ? `Kết quả cho "${search}"` : "Tất cả sản phẩm"}
@@ -80,8 +80,8 @@ export function ProductListFeature({
 
       <div className="mt-10">
         {query.isPending ? (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, index) => (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: 10 }).map((_, index) => (
               <div key={index} className="space-y-3">
                 <Skeleton className="aspect-[3/4] w-full" />
                 <Skeleton className="h-4 w-2/3" />

@@ -58,90 +58,100 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background">
-      <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-4 px-4 lg:px-8">
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger className="lg:hidden" aria-label="Mở menu">
-            <Menu className="size-5" />
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72">
-            <SheetTitle className="text-lg">Danh mục</SheetTitle>
-            <nav className="mt-6 flex flex-col gap-1">
-              <Link
-                to="/featured"
-                onClick={() => setOpen(false)}
-                className="border-b border-border py-3 font-display text-lg font-extrabold uppercase"
-              >
-                Sản phẩm nổi bật
-              </Link>
-              {NAV.map((item) => (
+      <div className="mx-auto flex h-16 max-w-[1800px] items-center justify-between px-4 lg:px-8">
+        {/* Left Column: Menu Drawer (Mobile) & Navigation Links (Desktop) */}
+        <div className="flex flex-1 items-center gap-6 min-w-0">
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger className="lg:hidden" aria-label="Mở menu">
+              <Menu className="size-5" />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72">
+              <SheetTitle className="text-lg">Danh mục</SheetTitle>
+              <nav className="mt-6 flex flex-col gap-1">
                 <Link
-                  key={item.gender}
-                  to="/products"
-                  search={{ gender: item.gender }}
+                  to="/featured"
                   onClick={() => setOpen(false)}
                   className="border-b border-border py-3 font-display text-lg font-extrabold uppercase"
                 >
-                  {item.label}
+                  Sản phẩm nổi bật
                 </Link>
-              ))}
-            </nav>
-          </SheetContent>
-        </Sheet>
+                {NAV.map((item) => (
+                  <Link
+                    key={item.gender}
+                    to="/products"
+                    search={{ gender: item.gender }}
+                    onClick={() => setOpen(false)}
+                    className="border-b border-border py-3 font-display text-lg font-extrabold uppercase"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
 
-        <Link to="/" className="font-display text-2xl font-extrabold uppercase tracking-tight">
-          Gymkitten
-        </Link>
-
-        <nav className="ml-6 hidden items-center gap-6 lg:flex">
-          <Link
-            to="/featured"
-            className="eyebrow transition-colors hover:text-muted-foreground"
-            activeProps={{ className: "underline underline-offset-8" }}
-          >
-            Sản phẩm nổi bật
-          </Link>
-          {NAV.map((item) => (
+          <nav className="hidden items-center gap-6 lg:flex">
+            {NAV.map((item) => (
+              <Link
+                key={item.gender}
+                to="/products"
+                search={{ gender: item.gender }}
+                className="eyebrow text-xs font-bold tracking-wider transition-colors hover:text-muted-foreground"
+                activeProps={{ className: "underline underline-offset-8" }}
+              >
+                {item.label}
+              </Link>
+            ))}
             <Link
-              key={item.gender}
-              to="/products"
-              search={{ gender: item.gender }}
-              className="eyebrow transition-colors hover:text-muted-foreground"
+              to="/featured"
+              className="eyebrow text-xs font-bold tracking-wider transition-colors hover:text-muted-foreground"
               activeProps={{ className: "underline underline-offset-8" }}
             >
-              {item.label}
+              Nổi bật
             </Link>
-          ))}
-        </nav>
+          </nav>
+        </div>
 
-        <form
-          className="ml-auto hidden w-72 items-center gap-2 border border-input px-3 md:flex"
-          onSubmit={(event) => {
-            event.preventDefault();
-            window.location.href = `/products?q=${encodeURIComponent(search)}`;
-          }}
-        >
-          <Search className="size-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm sản phẩm"
-            className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
-          />
-        </form>
+        {/* Center Column: GYMKITTEN Brand Logo Centered (Gymshark Style) */}
+        <div className="flex flex-shrink-0 items-center justify-center">
+          <Link
+            to="/"
+            className="font-display text-2xl md:text-3xl font-black uppercase tracking-wider text-foreground hover:opacity-90 transition-opacity select-none"
+          >
+            GYMKITTEN
+          </Link>
+        </div>
 
-        <div className="ml-auto flex items-center gap-4 md:ml-4">
-          <Link to="/account" aria-label="Tài khoản" className="relative">
+        {/* Right Column: Search, Account, Notification, Wishlist, Cart */}
+        <div className="flex flex-1 items-center justify-end gap-3 md:gap-4 min-w-0">
+          <form
+            className="hidden w-56 xl:w-72 items-center gap-2 border border-input px-3 md:flex rounded-none"
+            onSubmit={(event) => {
+              event.preventDefault();
+              window.location.href = `/products?q=${encodeURIComponent(search)}`;
+            }}
+          >
+            <Search className="size-4 text-muted-foreground shrink-0" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Tìm sản phẩm..."
+              className="h-9 border-0 px-0 shadow-none focus-visible:ring-0 text-xs"
+            />
+          </form>
+
+          <Link to="/account" aria-label="Tài khoản" className="relative p-1">
             <User className="size-5" />
             {hydrated && user ? (
-              <span className="absolute -bottom-1 left-1/2 h-0.5 w-4 -translate-x-1/2 bg-primary" />
+              <span className="absolute -bottom-0.5 left-1/2 h-0.5 w-4 -translate-x-1/2 bg-primary" />
             ) : null}
           </Link>
           <NotificationBell />
-          <Link to="/wishlist" aria-label="Yêu thích" className="relative">
+          <Link to="/wishlist" aria-label="Yêu thích" className="relative p-1">
             <Heart className="size-5" />
             <CountBadge value={hydrated && user ? wishlist.length : 0} />
           </Link>
-          <Link to="/cart" aria-label="Giỏ hàng" className="relative">
+          <Link to="/cart" aria-label="Giỏ hàng" className="relative p-1">
             <ShoppingBag className="size-5" />
             <CountBadge value={hydrated ? cartCount(lines) : 0} />
           </Link>

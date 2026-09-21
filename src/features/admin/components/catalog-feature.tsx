@@ -20,6 +20,7 @@ import {
   Sparkles,
   ChevronRight,
   Zap,
+  Search,
 } from "lucide-react";
 import {
   getCategoriesApi,
@@ -372,6 +373,8 @@ export function CatalogFeature() {
   });
 
   const [page, setPage] = useState(1);
+  const [productSearch, setProductSearch] = useState("");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
 
   // Data Queries
   const categoriesQuery = useQuery({
@@ -380,8 +383,8 @@ export function CatalogFeature() {
   });
 
   const productsQuery = useQuery({
-    queryKey: ["admin-products", page],
-    queryFn: () => getProductsAdminApi(page, 15),
+    queryKey: ["admin-products", page, productSearch, selectedCategoryFilter],
+    queryFn: () => getProductsAdminApi(page, 15, productSearch, selectedCategoryFilter),
   });
 
   // Variants Query for selected product modal
@@ -715,11 +718,72 @@ export function CatalogFeature() {
         </CardContent>
       </Card>
 
+      {/* Bộ lọc sản phẩm Catalog (Giống bộ lọc ở trang Quản lý Tồn kho) */}
+      <Card className="border border-border/80 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search className="size-4 text-muted-foreground" /> Bộ lọc sản phẩm Catalog
+            </div>
+            {(productSearch || selectedCategoryFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setProductSearch("");
+                  setSelectedCategoryFilter("all");
+                  setPage(1);
+                }}
+                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Xóa bộ lọc
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Lọc theo Tên sản phẩm, Slug (Ví dụ: Onyx, Seamless, Devant, Hoodie)..."
+              value={productSearch}
+              onChange={(e) => {
+                setProductSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 text-xs"
+            />
+          </div>
+          <div className="w-full sm:w-64">
+            <select
+              value={selectedCategoryFilter}
+              onChange={(e) => {
+                setSelectedCategoryFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs font-semibold text-foreground shadow-xs"
+            >
+              <option value="all">Tất cả danh mục ({categoryList.length})</option>
+              {categoryList.map((cat) => (
+                <option key={cat.categoryId} value={cat.categoryId}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Products Data Table */}
       <Card className="border border-border/80 shadow-sm overflow-hidden">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <PackageCheck className="size-4 text-primary" /> Danh sách sản phẩm Catalog
+          <CardTitle className="text-base font-bold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <PackageCheck className="size-4 text-primary" /> Danh sách sản phẩm Catalog
+            </div>
+            <span className="text-xs font-medium text-muted-foreground">
+              Tổng cộng: <strong className="text-foreground font-bold">{productsQuery.data?.totalCount || productList.length}</strong> sản phẩm
+            </span>
           </CardTitle>
         </CardHeader>
         <div className="overflow-x-auto">
@@ -743,7 +807,9 @@ export function CatalogFeature() {
               ) : !productList || productList.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-muted-foreground">
-                    Chưa có sản phẩm nào trong catalog.
+                    {productSearch || selectedCategoryFilter !== "all"
+                      ? "Không tìm thấy sản phẩm nào khớp với bộ lọc."
+                      : "Chưa có sản phẩm nào trong catalog."}
                   </td>
                 </tr>
               ) : (

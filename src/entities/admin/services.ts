@@ -340,10 +340,19 @@ export async function deleteCategoryApi(id: string): Promise<void> {
 export async function getProductsAdminApi(
   page = 1,
   pageSize = 15,
+  searchTerm?: string,
+  categoryId?: string,
 ): Promise<ProductPaginatedResponse> {
+  const query = new URLSearchParams();
+  query.append("page", String(page));
+  query.append("pageSize", String(pageSize));
+  query.append("activeState", "all");
+  if (searchTerm && searchTerm.trim()) query.append("q", searchTerm.trim());
+  if (categoryId && categoryId !== "all") query.append("categoryId", categoryId);
+
   try {
     const res = await request<ProductPaginatedResponse | AdminProductDto[] | { items: AdminProductDto[]; totalCount?: number; totalPages?: number }>(
-      `/api/products?page=${page}&pageSize=${pageSize}&activeState=all`,
+      `/api/products?${query.toString()}`,
     );
 
     if (Array.isArray(res)) {
