@@ -39,6 +39,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [hydrated, accessToken, navigate]);
 
+  // Khóa cuộn window hoàn toàn để chống browser scroll restoration gây lệch navbar/sidebar
+  useEffect(() => {
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    window.scrollTo(0, 0);
+
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+    };
+  }, []);
+
   if (!hydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground text-xs font-semibold">
