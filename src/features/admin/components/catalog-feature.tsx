@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Sparkles,
   ChevronRight,
+  Zap,
 } from "lucide-react";
 import {
   getCategoriesApi,
@@ -123,6 +124,39 @@ const PRESET_COLORS = [
 
 export const STANDARD_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"] as const;
 
+export interface SizePresetValues {
+  chestMin: number;
+  chestMax: number;
+  waistMin: number;
+  waistMax: number;
+  hipsMin: number;
+  hipsMax: number;
+  heightMin: number;
+  heightMax: number;
+}
+
+export const MEN_SIZE_PRESETS: Record<string, SizePresetValues> = {
+  XS: { chestMin: 80, chestMax: 86, waistMin: 68, waistMax: 74, hipsMin: 84, hipsMax: 90, heightMin: 155, heightMax: 165 },
+  S: { chestMin: 86, chestMax: 92, waistMin: 72, waistMax: 78, hipsMin: 88, hipsMax: 94, heightMin: 160, heightMax: 170 },
+  M: { chestMin: 92, chestMax: 98, waistMin: 78, waistMax: 84, hipsMin: 94, hipsMax: 100, heightMin: 165, heightMax: 175 },
+  L: { chestMin: 98, chestMax: 104, waistMin: 84, waistMax: 90, hipsMin: 100, hipsMax: 106, heightMin: 170, heightMax: 180 },
+  XL: { chestMin: 104, chestMax: 112, waistMin: 90, waistMax: 96, hipsMin: 106, hipsMax: 112, heightMin: 175, heightMax: 185 },
+  XXL: { chestMin: 112, chestMax: 120, waistMin: 96, waistMax: 104, hipsMin: 112, hipsMax: 118, heightMin: 180, heightMax: 190 },
+  "3XL": { chestMin: 120, chestMax: 128, waistMin: 104, waistMax: 112, hipsMin: 118, hipsMax: 126, heightMin: 185, heightMax: 195 },
+  FreeSize: { chestMin: 90, chestMax: 105, waistMin: 75, waistMax: 90, hipsMin: 92, hipsMax: 108, heightMin: 165, heightMax: 180 },
+};
+
+export const WOMEN_SIZE_PRESETS: Record<string, SizePresetValues> = {
+  XS: { chestMin: 76, chestMax: 82, waistMin: 58, waistMax: 64, hipsMin: 82, hipsMax: 88, heightMin: 150, heightMax: 158 },
+  S: { chestMin: 82, chestMax: 88, waistMin: 64, waistMax: 70, hipsMin: 88, hipsMax: 94, heightMin: 155, heightMax: 163 },
+  M: { chestMin: 88, chestMax: 94, waistMin: 70, waistMax: 76, hipsMin: 94, hipsMax: 100, heightMin: 160, heightMax: 168 },
+  L: { chestMin: 94, chestMax: 100, waistMin: 76, waistMax: 82, hipsMin: 100, hipsMax: 106, heightMin: 165, heightMax: 173 },
+  XL: { chestMin: 100, chestMax: 106, waistMin: 82, waistMax: 88, hipsMin: 106, hipsMax: 112, heightMin: 168, heightMax: 176 },
+  XXL: { chestMin: 106, chestMax: 114, waistMin: 88, waistMax: 96, hipsMin: 112, hipsMax: 118, heightMin: 170, heightMax: 180 },
+  "3XL": { chestMin: 114, chestMax: 122, waistMin: 96, waistMax: 104, hipsMin: 118, hipsMax: 126, heightMin: 172, heightMax: 182 },
+  FreeSize: { chestMin: 82, chestMax: 96, waistMin: 64, waistMax: 78, hipsMin: 88, hipsMax: 102, heightMin: 155, heightMax: 170 },
+};
+
 export function slugify(str: string): string {
   return str
     .toLowerCase()
@@ -212,17 +246,70 @@ export function CatalogFeature() {
   const [heightMin, setHeightMin] = useState<number | "">("");
   const [heightMax, setHeightMax] = useState<number | "">("");
 
-  const resetSizeGuideForm = () => {
+  const [isSeedingAllSizes, setIsSeedingAllSizes] = useState(false);
+
+  // Điền tự động số đo chuẩn cho từng size
+  const applyPresetForSize = (targetSize: string, targetProduct?: AdminProductDto | null) => {
+    const prod = targetProduct !== undefined ? targetProduct : sizeGuideProduct;
+    const isFemale = prod?.gender?.toLowerCase() === "women";
+    const presets = isFemale ? WOMEN_SIZE_PRESETS : MEN_SIZE_PRESETS;
+    const preset = presets[targetSize] || presets["M"];
+
+    if (preset) {
+      setChestMin(preset.chestMin);
+      setChestMax(preset.chestMax);
+      setWaistMin(preset.waistMin);
+      setWaistMax(preset.waistMax);
+      setHipsMin(preset.hipsMin);
+      setHipsMax(preset.hipsMax);
+      setHeightMin(preset.heightMin);
+      setHeightMax(preset.heightMax);
+    }
+  };
+
+  const resetSizeGuideForm = (targetProduct?: AdminProductDto | null) => {
     setEditingGuideId(null);
     setGuideSize("M");
-    setChestMin("");
-    setChestMax("");
-    setWaistMin("");
-    setWaistMax("");
-    setHipsMin("");
-    setHipsMax("");
-    setHeightMin("");
-    setHeightMax("");
+    applyPresetForSize("M", targetProduct);
+  };
+
+  // Tạo nhanh bảng size chuẩn (S, M, L, XL) cho sản phẩm
+  const handleQuickSeedStandardSizes = async () => {
+    if (!sizeGuideProduct) return;
+    try {
+      setIsSeedingAllSizes(true);
+      const isFemale = sizeGuideProduct?.gender?.toLowerCase() === "women";
+      const presets = isFemale ? WOMEN_SIZE_PRESETS : MEN_SIZE_PRESETS;
+      const defaultSizes = ["S", "M", "L", "XL"];
+      
+      const existingSizes = new Set(sizeGuideQuery.data?.items?.map((i) => i.size.toUpperCase()) || []);
+      const toAdd = defaultSizes.filter((s) => !existingSizes.has(s.toUpperCase()));
+
+      if (toAdd.length === 0) {
+        toast.info("Tất cả các size S, M, L, XL đã tồn tại trong bảng size!");
+        return;
+      }
+
+      for (const size of toAdd) {
+        const p = presets[size];
+        await createAdminSizeGuideApi(sizeGuideProduct.productId, {
+          size,
+          chestCm: `${p.chestMin}-${p.chestMax}`,
+          waistCm: `${p.waistMin}-${p.waistMax}`,
+          hipsCm: `${p.hipsMin}-${p.hipsMax}`,
+          heightRangeCm: `${p.heightMin}-${p.heightMax}`,
+        });
+      }
+
+      toast.success(`Đã tự động tạo ${toAdd.length} dòng size chuẩn (${toAdd.join(", ")})!`);
+      queryClient.invalidateQueries({ queryKey: ["admin-size-guide", sizeGuideProduct.productId] });
+      queryClient.invalidateQueries({ queryKey: ["size-guide", sizeGuideProduct.productId] });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Đã có lỗi xảy ra";
+      toast.error(`Lỗi khi tạo nhanh bảng size: ${msg}`);
+    } finally {
+      setIsSeedingAllSizes(false);
+    }
   };
 
   const sizeGuideQuery = useQuery({
@@ -737,7 +824,7 @@ export function CatalogFeature() {
                         variant="outline"
                         onClick={() => {
                           setSizeGuideProduct(product);
-                          resetSizeGuideForm();
+                          resetSizeGuideForm(product);
                         }}
                         className="h-8 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                       >
@@ -1753,14 +1840,39 @@ export function CatalogFeature() {
           <div className="space-y-6 py-2">
             {/* Existing Size Guide Rows Table */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                Danh sách số đo kích cỡ hiện tại ({sizeGuideQuery.data?.items?.length || 0})
-              </h4>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                  Danh sách số đo kích cỡ hiện tại ({sizeGuideQuery.data?.items?.length || 0})
+                </h4>
+                {sizeGuideQuery.data?.items && sizeGuideQuery.data.items.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isSeedingAllSizes}
+                    onClick={handleQuickSeedStandardSizes}
+                    className="h-7 text-xs font-semibold gap-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border-emerald-300"
+                  >
+                    <Zap className="size-3 text-amber-500" />
+                    {isSeedingAllSizes ? "Đang tạo..." : "Thêm nhanh các size chuẩn còn thiếu"}
+                  </Button>
+                )}
+              </div>
               {sizeGuideQuery.isLoading ? (
                 <div className="py-6 text-center text-xs text-muted-foreground">Đang nạp bảng size...</div>
               ) : !sizeGuideQuery.data?.items || sizeGuideQuery.data.items.length === 0 ? (
-                <div className="p-6 text-center border border-dashed rounded-xl text-xs text-muted-foreground">
-                  Sản phẩm này chưa được tạo bảng size. Hãy nhập thông số bên dưới để thiết lập bảng size mới.
+                <div className="p-6 text-center border border-dashed rounded-xl text-xs text-muted-foreground space-y-3 bg-muted/10">
+                  <p>Sản phẩm này chưa được tạo bảng size. Bạn có thể tự điền bên dưới hoặc bấm nút dưới để tạo nhanh toàn bộ các size chuẩn.</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isSeedingAllSizes}
+                    onClick={handleQuickSeedStandardSizes}
+                    className="font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                  >
+                    <Zap className="size-3.5 text-amber-300" />
+                    {isSeedingAllSizes ? "Đang tạo bảng size..." : "Tạo nhanh bảng size chuẩn (S, M, L, XL)"}
+                  </Button>
                 </div>
               ) : (
                 <div className="border rounded-xl overflow-hidden shadow-sm">
@@ -1846,7 +1958,7 @@ export function CatalogFeature() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={resetSizeGuideForm}
+                    onClick={() => resetSizeGuideForm()}
                     className="h-7 text-xs text-muted-foreground hover:text-foreground font-semibold"
                   >
                     Hủy sửa (Tạo dòng mới)
@@ -1854,21 +1966,83 @@ export function CatalogFeature() {
                 )}
               </div>
 
-              {/* Row 1: Size Selector */}
-              <div className="max-w-xs space-y-1.5">
-                <Label htmlFor="gs-size" className="text-xs font-bold text-foreground">Kích cỡ (Size) (*)</Label>
-                <select
-                  id="gs-size"
-                  value={guideSize}
-                  onChange={(e) => setGuideSize(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs font-black text-primary shadow-xs"
-                >
-                  {["XS", "S", "M", "L", "XL", "XXL", "3XL", "FreeSize"].map((s) => (
-                    <option key={s} value={s}>
-                      Size {s}
-                    </option>
-                  ))}
-                </select>
+              {/* Row 1: Size Selector & Quick Pills */}
+              <div className="space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="gs-size" className="text-xs font-bold text-foreground">
+                      Kích cỡ (Size) (*)
+                    </Label>
+                    <Badge variant="secondary" className="text-[10px] font-bold py-0.5 px-2 bg-primary/10 text-primary border border-primary/20">
+                      {sizeGuideProduct?.gender?.toLowerCase() === "women" ? "Số đo chuẩn Nữ" : "Số đo chuẩn Nam"}
+                    </Badge>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyPresetForSize(guideSize)}
+                    className="h-7 text-xs font-semibold gap-1.5 text-primary border-primary/30 hover:bg-primary/10 self-start sm:self-auto"
+                  >
+                    <Sparkles className="size-3 text-amber-500" /> Tự động điền số đo chuẩn Size {guideSize}
+                  </Button>
+                </div>
+
+                {/* Quick Size Select Pills */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {["XS", "S", "M", "L", "XL", "XXL", "3XL", "FreeSize"].map((s) => {
+                    const isSelected = guideSize === s;
+                    const isExisting = sizeGuideQuery.data?.items?.some(
+                      (item) => item.size.toUpperCase() === s.toUpperCase()
+                    );
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => {
+                          setGuideSize(s);
+                          if (!editingGuideId) {
+                            applyPresetForSize(s);
+                          }
+                        }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border",
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary shadow-xs ring-2 ring-primary/30"
+                            : isExisting
+                            ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:border-emerald-500"
+                            : "bg-background text-foreground border-border hover:border-primary/40 hover:bg-muted/40"
+                        )}
+                      >
+                        <span>Size {s}</span>
+                        {isExisting && (
+                          <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" title="Đã có trong bảng size" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="max-w-xs pt-1">
+                  <select
+                    id="gs-size"
+                    value={guideSize}
+                    onChange={(e) => {
+                      const newSize = e.target.value;
+                      setGuideSize(newSize);
+                      if (!editingGuideId) {
+                        applyPresetForSize(newSize);
+                      }
+                    }}
+                    className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs font-black text-primary shadow-xs"
+                  >
+                    {["XS", "S", "M", "L", "XL", "XXL", "3XL", "FreeSize"].map((s) => (
+                      <option key={s} value={s}>
+                        Size {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Row 2: 2x2 Grid for Measurement Ranges */}
