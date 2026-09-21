@@ -275,6 +275,8 @@ export interface ProductImageDto {
   imageUrl: string;
   displayOrder: number;
   isPrimary: boolean;
+  colorName?: string | null;
+  colorHex?: string | null;
 }
 
 export interface SystemLogDetailDto {

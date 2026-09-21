@@ -1789,25 +1789,28 @@ export function CatalogFeature() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {productImagesQuery.data.map((img) => {
                     const matchedVariant = imageProductVariantsQuery.data?.find((v) => v.variantId === img.variantId);
+                    const colorName = img.colorName || matchedVariant?.colorName;
+                    const colorHex = img.colorHex || matchedVariant?.colorHex;
                     return (
                       <div key={img.imageId} className="group relative rounded-lg border bg-background overflow-hidden shadow-sm">
                         <div className="aspect-square w-full overflow-hidden bg-muted">
                           <img src={img.imageUrl} alt="Product image" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                         </div>
                         <div className="p-2 space-y-1">
-                          <div className="flex items-center justify-between text-[10px]">
-                            {img.variantId && matchedVariant ? (
-                              <Badge variant="secondary" className="font-bold text-[9px] truncate max-w-[130px] flex items-center gap-1">
+                          <div className="flex items-center justify-between text-[10px] gap-1">
+                            {img.variantId && colorName ? (
+                              <Badge variant="secondary" className="font-bold text-[9px] truncate max-w-[140px] flex items-center gap-1.5 py-0.5">
                                 <span
-                                  className="size-2 rounded-full border shrink-0"
-                                  style={{ backgroundColor: matchedVariant.colorHex || "#000" }}
+                                  className="size-2.5 rounded-full border shadow-xs shrink-0"
+                                  style={{ backgroundColor: colorHex || "#000000" }}
                                 />
-                                <span>Màu {matchedVariant.colorName}</span>
+                                <span className="truncate">Màu {colorName}</span>
+                                {colorHex && <span className="font-mono text-[8px] opacity-75 shrink-0">({colorHex})</span>}
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-[9px]">Gốc (Product)</Badge>
                             )}
-                            {img.isPrimary && <Badge className="bg-amber-500 text-[9px] py-0 px-1">Chính</Badge>}
+                            {img.isPrimary && <Badge className="bg-amber-500 text-white text-[9px] py-0 px-1 shrink-0 font-bold">Chính</Badge>}
                           </div>
                         </div>
 
@@ -1838,11 +1841,54 @@ export function CatalogFeature() {
               </h4>
 
               {/* Target Variant Selector (Grouped by Color) */}
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="target-variant" className="text-xs">Áp dụng hình ảnh cho (*)</Label>
-                  <span className="text-[10px] text-muted-foreground">Chọn theo Màu đại diện</span>
+                  <Label htmlFor="target-variant" className="text-xs font-semibold">Áp dụng hình ảnh cho (*)</Label>
+                  <span className="text-[10px] text-muted-foreground">Bấm chọn màu hoặc chọn trong danh sách</span>
                 </div>
+
+                {/* Quick Color Swatches Click */}
+                {imageProductColorGroupsQuery.data && imageProductColorGroupsQuery.data.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedVariantId("")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md border text-xs transition-all",
+                        selectedVariantId === ""
+                          ? "border-primary bg-primary/10 ring-1 ring-primary font-bold text-foreground"
+                          : "border-border bg-background hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      Sản phẩm gốc
+                    </button>
+                    {imageProductColorGroupsQuery.data.map((g) => {
+                      const isSelected = selectedVariantId === g.representativeVariantId;
+                      return (
+                        <button
+                          key={g.representativeVariantId}
+                          type="button"
+                          onClick={() => setSelectedVariantId(g.representativeVariantId)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs transition-all",
+                            isSelected
+                              ? "border-primary bg-primary/10 ring-1 ring-primary font-bold text-foreground shadow-xs"
+                              : "border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          <span
+                            className="size-3 rounded-full border shadow-xs shrink-0"
+                            style={{ backgroundColor: g.colorHex || "#000000" }}
+                          />
+                          <span>{g.colorName}</span>
+                          {g.colorHex && <span className="font-mono text-[9px] opacity-75 font-normal">({g.colorHex})</span>}
+                          {isSelected && <Check className="size-3 text-primary" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <select
                   id="target-variant"
                   value={selectedVariantId}
@@ -1853,15 +1899,48 @@ export function CatalogFeature() {
                   {imageProductColorGroupsQuery.data && imageProductColorGroupsQuery.data.length > 0
                     ? imageProductColorGroupsQuery.data.map((g) => (
                         <option key={g.representativeVariantId} value={g.representativeVariantId}>
-                          Màu sắc: ● {g.colorName} (Áp dụng cho {g.variants.length} size: {g.availableSizes.join(", ")})
+                          Màu sắc: {g.colorName} [ {g.colorHex || "N/A"} ] (Áp dụng cho {g.variants.length} size: {g.availableSizes.join(", ")})
                         </option>
                       ))
                     : imageProductVariantsQuery.data?.map((v) => (
                         <option key={v.variantId} value={v.variantId}>
-                          Biến thể: {v.colorName} - {v.size} (SKU: {v.sku})
+                          Biến thể: {v.colorName} [ {v.colorHex || "N/A"} ] - Size {v.size} (SKU: {v.sku})
                         </option>
                       ))}
                 </select>
+
+                {/* Selected Color Visual Feedback */}
+                {selectedVariantId ? (() => {
+                  const selectedGroup = imageProductColorGroupsQuery.data?.find((g) => g.representativeVariantId === selectedVariantId);
+                  const selectedVariant = imageProductVariantsQuery.data?.find((v) => v.variantId === selectedVariantId);
+                  const cName = selectedGroup?.colorName || selectedVariant?.colorName;
+                  const cHex = selectedGroup?.colorHex || selectedVariant?.colorHex;
+                  return (
+                    <div className="flex items-center justify-between p-2.5 rounded-lg border bg-primary/5 border-primary/20 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="size-4 rounded-full border shadow-xs shrink-0"
+                          style={{ backgroundColor: cHex || "#000000" }}
+                        />
+                        <span>
+                          Gán ảnh cho màu: <strong className="font-bold text-foreground">{cName}</strong>
+                          {cHex && (
+                            <span className="ml-2 font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted border font-semibold">
+                              {cHex}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px]">
+                        {selectedGroup ? `${selectedGroup.variants.length} size (${selectedGroup.availableSizes.join(", ")})` : "1 biến thể"}
+                      </Badge>
+                    </div>
+                  );
+                })() : (
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-dashed bg-muted/20 text-[11px] text-muted-foreground">
+                    <span>Đang chọn: <strong>Ảnh sản phẩm gốc</strong> (Hiển thị chung khi chưa chọn màu).</span>
+                  </div>
+                )}
                 <p className="text-[11px] text-muted-foreground">Ảnh gán cho một màu sẽ tự động hiển thị cho mọi size của màu đó trên trang sản phẩm.</p>
               </div>
 

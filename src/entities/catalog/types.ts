@@ -32,6 +32,8 @@ export interface ProductImage {
   imageUrl: string;
   displayOrder: number;
   isPrimary: boolean;
+  colorName?: string | null;
+  colorHex?: string | null;
 }
 
 export interface SizeGuideRow {
