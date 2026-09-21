@@ -81,14 +81,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen bg-muted/20 font-sans antialiased text-foreground">
-      {/* Sidebar */}
+    <div className="flex h-screen w-full overflow-hidden bg-muted/20 font-sans antialiased text-foreground">
+      {/* Sidebar - Fixed height full sidebar */}
       <AdminSidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         <AdminHeader title="GymKitten Admin CMS Portal" />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto min-h-0">{children}</main>
       </div>
     </div>
   );

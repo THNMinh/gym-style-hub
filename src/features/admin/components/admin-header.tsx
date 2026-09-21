@@ -7,7 +7,7 @@ export function AdminHeader({ title }: { title: string }) {
   const user = useAuthStore((s) => s.user);
 
   return (
-    <header className="h-16 bg-background border-b border-border/80 px-6 flex items-center justify-between sticky top-0 z-20">
+    <header className="h-16 flex-shrink-0 bg-background border-b border-border/80 px-6 flex items-center justify-between z-20">
       <div>
         <h1 className="text-xl font-bold text-foreground">{title}</h1>
       </div>

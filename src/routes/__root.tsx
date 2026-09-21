@@ -130,7 +130,7 @@ function RootComponent() {
       {!isAdminPath && <AdminReturnBar />}
       {!isAdminPath && <AnnouncementBar />}
       {!isAdminPath && <SiteHeader />}
-      <main>
+      <main className={isAdminPath ? "h-screen overflow-hidden" : ""}>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
       </main>

@@ -39,9 +39,9 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 flex-shrink-0 bg-slate-900 text-slate-100 flex flex-col min-h-screen border-r border-slate-800">
+    <aside className="w-64 flex-shrink-0 bg-slate-900 text-slate-100 flex flex-col h-full border-r border-slate-800 select-none">
       {/* Brand Header */}
-      <Link to="/admin/dashboard" className="h-16 flex items-center px-6 border-b border-slate-800 gap-3 hover:bg-slate-800/50 transition-colors">
+      <Link to="/admin/dashboard" className="h-16 flex-shrink-0 flex items-center px-6 border-b border-slate-800 gap-3 hover:bg-slate-800/50 transition-colors">
         <div className="size-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-black">
           <Dumbbell className="size-5" />
         </div>
@@ -85,7 +85,7 @@ export function AdminSidebar() {
       </nav>
 
       {/* Footer / Quick Actions */}
-      <div className="p-4 border-t border-slate-800 space-y-2">
+      <div className="p-4 border-t border-slate-800 space-y-2 flex-shrink-0">
         <Link
           to="/"
           className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
