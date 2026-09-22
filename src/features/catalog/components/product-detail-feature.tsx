@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Heart, Minus, Plus, ShieldCheck, Truck, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Product } from "@/entities/catalog/types";
@@ -21,6 +21,7 @@ import { ProductCard } from "./product-card";
 import { cn } from "@/lib/utils";
 
 export function ProductDetailFeature({ product }: { product: Product }) {
+  const navigate = useNavigate();
   const hydrated = useHydrated();
   const queryClient = useQueryClient();
   const addItem = useCartStore((s) => s.addItem);
@@ -133,6 +134,15 @@ export function ProductDetailFeature({ product }: { product: Product }) {
   });
 
   function handleAdd() {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng", {
+        action: {
+          label: "Đăng nhập",
+          onClick: () => navigate({ to: "/auth", search: { redirect: window.location.pathname } }),
+        },
+      });
+      return;
+    }
     if (!selectedColor) {
       toast.error("Vui lòng chọn màu sản phẩm");
       return;

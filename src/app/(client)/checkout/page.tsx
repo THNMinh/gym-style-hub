@@ -1,21 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { CartSummary } from "@/components/checkout/cart-summary";
 import { useCartStore } from "@/features/cart/store";
+import { useAuthStore } from "@/features/auth/store";
 import { useHydrated } from "@/shared/hooks/use-hydrated";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import type { ApplyCouponResponse } from "@/entities/coupon/types";
 
 export default function CheckoutPage() {
   const hydrated = useHydrated();
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
   const lines = useCartStore((s) => s.lines);
   const [appliedCoupon, setAppliedCoupon] = useState<ApplyCouponResponse | null>(null);
 
-  if (!hydrated) {
+  useEffect(() => {
+    if (hydrated && !user) {
+      toast.error("Vui lòng đăng nhập để tiến hành thanh toán!");
+      navigate({ to: "/auth", search: { redirect: "/checkout" } });
+    }
+  }, [hydrated, user, navigate]);
+
+  if (!hydrated || !user) {
     return <div className="min-h-[60vh] flex items-center justify-center" />;
   }
 

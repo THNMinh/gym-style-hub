@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Heart, Star, ShoppingBag, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, selectedColor }: ProductCardProps) {
+  const navigate = useNavigate();
   const hydrated = useHydrated();
   const queryClient = useQueryClient();
   const wishlist = useWishlistStore((s) => s.productIds);
@@ -115,7 +116,12 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
     e.stopPropagation();
 
     if (!user) {
-      toast.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
+      toast.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng", {
+        action: {
+          label: "Đăng nhập",
+          onClick: () => navigate({ to: "/auth", search: { redirect: window.location.pathname + window.location.search } }),
+        },
+      });
       return;
     }
 

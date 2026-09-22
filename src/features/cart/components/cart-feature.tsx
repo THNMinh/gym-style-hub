@@ -1,8 +1,10 @@
 import { useMemo } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Minus, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { cartSubTotal, useCartStore } from "../store";
+import { useAuthStore } from "@/features/auth/store";
 import { formatPrice } from "@/shared/lib/format";
 import { env } from "@/core/config/env";
 import { Button } from "@/components/ui/button";
@@ -11,6 +13,8 @@ import { getProductsByIds } from "@/entities/catalog/services";
 import type { Product } from "@/entities/catalog/types";
 
 export function CartFeature() {
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
   const hydrated = useHydrated();
   const lines = useCartStore((s) => s.lines);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
@@ -217,8 +221,18 @@ export function CartFeature() {
               </p>
             </div>
           ) : (
-            <Button asChild className="mt-6 w-full">
-              <Link to="/checkout">Thanh toán</Link>
+            <Button
+              onClick={() => {
+                if (!user) {
+                  toast.error("Vui lòng đăng nhập để tiến hành thanh toán!");
+                  navigate({ to: "/auth", search: { redirect: "/checkout" } });
+                  return;
+                }
+                navigate({ to: "/checkout" });
+              }}
+              className="mt-6 w-full"
+            >
+              Thanh toán
             </Button>
           )}
 
