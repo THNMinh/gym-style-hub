@@ -11,6 +11,33 @@ import { signalRService } from "../services/signalr-service";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 
+// Phát âm thanh thông báo nhẹ nhàng qua Web Audio API (không phụ thuộc file ngoài, không bị lỗi 404)
+function playNotificationSound() {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
+
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    }
+  } catch {
+    // Bỏ qua nếu trình duyệt chặn autoplay trước khi có tương tác người dùng
+  }
+}
+
 export function useNotifications() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
@@ -40,13 +67,21 @@ export function useNotifications() {
 
   const handleIncomingNotification = useCallback(
     (incoming: NotificationPayload & { orderId?: string }) => {
-      setUnreadCount((prev) => prev + 1);
-      setNotifications((prev) => [
-        incoming,
-        ...prev.filter((n) => n.notificationId !== incoming.notificationId),
-      ]);
+      // 1. Tự động làm mới danh sách sản phẩm, cart & wishlist khi có cập nhật sản phẩm / ẩn sản phẩm từ Admin
+      if (incoming.type === "PRODUCT_UPDATED" || (incoming as any).productId) {
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+        queryClient.invalidateQueries({ queryKey: ["wishlist-full-products"] });
+        queryClient.invalidateQueries({ queryKey: ["cart-products-validation"] });
+        queryClient.invalidateQueries({ queryKey: ["admin-products"] });
 
-      // Tự động làm mới danh sách đơn hàng & chi tiết đơn hàng trên màn hình khi nhận được thông báo về Đơn hàng (Real-time update)
+        // Nếu đây là sự kiện cập nhật dữ liệu ngầm (không phải tin nhắn thông báo gửi cho người dùng), dừng tại đây
+        if (!incoming.title && !incoming.notificationId) {
+          return;
+        }
+      }
+
+      // 2. Tự động làm mới danh sách đơn hàng & chi tiết đơn hàng trên màn hình khi nhận được thông báo về Đơn hàng (Real-time update)
       if (incoming.type === "Order" || incoming.orderId) {
         queryClient.invalidateQueries({ queryKey: ["my-orders"] });
         queryClient.invalidateQueries({ queryKey: ["client-order-detail"] });
@@ -54,14 +89,16 @@ export function useNotifications() {
         queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       }
 
-      // Tự động làm mới danh sách sản phẩm, cart & wishlist khi có cập nhật sản phẩm / ẩn sản phẩm từ Admin
-      if (incoming.type === "PRODUCT_UPDATED" || (incoming as any).productId) {
-        queryClient.invalidateQueries({ queryKey: ["products"] });
-        queryClient.invalidateQueries({ queryKey: ["wishlist"] });
-        queryClient.invalidateQueries({ queryKey: ["wishlist-full-products"] });
-        queryClient.invalidateQueries({ queryKey: ["cart-products-validation"] });
-        queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      // Nếu payload không có tiêu đề thông báo (chỉ là event data ngầm) thì không hiển thị toast và không phát âm thanh
+      if (!incoming.title) {
+        return;
       }
+
+      setUnreadCount((prev) => prev + 1);
+      setNotifications((prev) => [
+        incoming,
+        ...prev.filter((n) => n.notificationId !== incoming.notificationId),
+      ]);
 
       toast.info(incoming.title, {
         description: incoming.content,
@@ -79,10 +116,7 @@ export function useNotifications() {
           : undefined,
       });
 
-      try {
-        const audio = new Audio("/sounds/notification.mp3");
-        audio.play().catch(() => {});
-      } catch {}
+      playNotificationSound();
     },
     [navigate, queryClient]
   );
@@ -109,10 +143,7 @@ export function useNotifications() {
         duration: 8000,
       });
 
-      try {
-        const audio = new Audio("/sounds/notification.mp3");
-        audio.play().catch(() => {});
-      } catch {}
+      playNotificationSound();
     },
     [navigate, queryClient]
   );
