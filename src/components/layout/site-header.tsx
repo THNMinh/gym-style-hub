@@ -31,6 +31,7 @@ function CountBadge({ value }: { value: number }) {
 export function SiteHeader() {
   const hydrated = useHydrated();
   const lines = useCartStore((s) => s.lines);
+  const openDrawer = useCartStore((s) => s.openDrawer);
   const wishlist = useWishlistStore((s) => s.productIds);
   const setProductIds = useWishlistStore((s) => s.setProductIds);
   const clearWishlist = useWishlistStore((s) => s.clear);
@@ -41,6 +42,16 @@ export function SiteHeader() {
   const wishlistQuery = useQuery({
     queryKey: ["wishlist"],
     queryFn: () => getMyWishlist(1, 100),
+    enabled: hydrated && !!user,
+  });
+
+  const fetchCart = useCartStore((s) => s.fetchCart);
+  useQuery({
+    queryKey: ["cart"],
+    queryFn: async () => {
+      await fetchCart();
+      return true;
+    },
     enabled: hydrated && !!user,
   });
 
@@ -151,10 +162,15 @@ export function SiteHeader() {
             <Heart className="size-5" />
             <CountBadge value={hydrated && user ? wishlist.length : 0} />
           </Link>
-          <Link to="/cart" aria-label="Giỏ hàng" className="relative p-1">
+          <button
+            type="button"
+            onClick={openDrawer}
+            aria-label="Giỏ hàng"
+            className="relative p-1 hover:text-muted-foreground transition-colors cursor-pointer"
+          >
             <ShoppingBag className="size-5" />
             <CountBadge value={hydrated ? cartCount(lines) : 0} />
-          </Link>
+          </button>
         </div>
       </div>
     </header>

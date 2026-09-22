@@ -1,11 +1,15 @@
 const getApiBaseUrl = (): string => {
-  const viteUrl =
+  const rawUrl =
     (typeof import.meta !== "undefined" && (import.meta.env?.["VITE_API_BASE_URL"] as string | undefined)) ||
     (typeof process !== "undefined" && process.env?.["NEXT_PUBLIC_API_BASE_URL"]) ||
     (typeof process !== "undefined" && process.env?.["VITE_API_BASE_URL"]);
 
-  if (viteUrl && typeof viteUrl === "string" && viteUrl.trim().length > 0) {
-    return viteUrl.trim().replace(/\/$/, "");
+  if (rawUrl && typeof rawUrl === "string" && rawUrl.trim().length > 0) {
+    // Tự động chuẩn hóa: gỡ bỏ /swagger/index.html hoặc /swagger nếu người dùng dán cả link swagger vào
+    return rawUrl
+      .trim()
+      .replace(/\/swagger(?:\/index\.html)?\/?$/i, "")
+      .replace(/\/$/, "");
   }
 
   // Mặc định kết nối tới Backend GymKitten trên Render

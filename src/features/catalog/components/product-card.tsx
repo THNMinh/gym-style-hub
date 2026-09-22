@@ -28,6 +28,7 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
   const removeId = useWishlistStore((s) => s.removeId);
   const addItemToCart = useCartStore((s) => s.addItem);
   const user = useAuthStore((s) => s.user);
+  const [addingVariantId, setAddingVariantId] = useState<string | null>(null);
 
   // Available unique colors in product variants
   const colorMap = useMemo(() => {
@@ -46,14 +47,13 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
   }, [selectedColor, colorMap]);
 
   const [activeColor, setActiveColor] = useState<string>(defaultColorName || selectedColor || "");
-
   const currentColorName = activeColor || defaultColorName;
 
-  // Filter variants matching active color
+  // Variants filtered by active color
   const activeColorVariants = useMemo(() => {
     if (!currentColorName) return product.variants || [];
     const matched = (product.variants || []).filter(
-      (v) => v.colorName.toLowerCase() === currentColorName.toLowerCase()
+      (v) => v.colorName.toLowerCase() === currentColorName.toLowerCase(),
     );
     return matched.length > 0 ? matched : product.variants || [];
   }, [product.variants, currentColorName]);
@@ -63,16 +63,17 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
     if (!currentColorName) return product.images || [];
     const matchedVariantIds = new Set(activeColorVariants.map((v) => v.variantId));
     const variantImgs = (product.images || []).filter(
-      (img) => img.variantId && matchedVariantIds.has(img.variantId)
+      (img) => img.variantId && matchedVariantIds.has(img.variantId),
     );
     if (variantImgs.length > 0) return variantImgs;
     return product.images || [];
   }, [product.images, activeColorVariants, currentColorName]);
 
-  const primaryImage = activeImages[0]?.imageUrl || product.images[0]?.imageUrl || "";
+  const primaryImage = activeImages[0]?.imageUrl || product.images?.[0]?.imageUrl || "";
   const secondaryImage =
-    activeImages[1]?.imageUrl || product.images[1]?.imageUrl || primaryImage;
+    activeImages[1]?.imageUrl || product.images?.[1]?.imageUrl || primaryImage;
 
+  // Price range or single price
   const price = useMemo(() => {
     const list = activeColorVariants.length > 0 ? activeColorVariants : product.variants || [];
     if (list.length === 0) return 0;
@@ -111,7 +112,7 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
     }
   };
 
-  const handleQuickAddToCart = (e: React.MouseEvent, variant: ProductVariant) => {
+  const handleQuickAddToCart = async (e: React.MouseEvent, variant: ProductVariant) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -125,10 +126,25 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
       return;
     }
 
-    addItemToCart(product, variant, 1);
-    toast.success(`Đã thêm Size ${variant.size} (${variant.colorName}) vào giỏ hàng!`, {
-      description: `${product.name} — ${formatPrice(variant.price)}`,
-    });
+    // Chặn người dùng spam click nhiều lần liên tục làm tốn request/bandwidth
+    if (addingVariantId) return;
+
+    try {
+      setAddingVariantId(variant.variantId);
+      // Cooldown delay (650ms) để người dùng thấy rõ hiệu ứng loading ô size và ngăn chặn spam nút giống Gymshark
+      const cooldownTimer = new Promise((resolve) => setTimeout(resolve, 650));
+      await Promise.all([
+        addItemToCart(product, variant, 1),
+        cooldownTimer,
+      ]);
+      toast.success(`Đã thêm Size ${variant.size} (${variant.colorName}) vào giỏ hàng!`, {
+        description: `${product.name} — ${formatPrice(variant.price)}`,
+      });
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể thêm vào giỏ hàng. Vui lòng thử lại!");
+    } finally {
+      setAddingVariantId(null);
+    }
   };
 
   // Map of available sizes for active color
@@ -211,11 +227,11 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
           </span>
         ) : null}
 
-        {/* Gymshark Style Hover Quick-Size Grid Overlay */}
+        {/* Hover Quick-Size Grid Overlay */}
         {!isInactive && (
           <div className="absolute inset-x-2 bottom-2 z-20 hidden group-hover:flex flex-col bg-background/95 backdrop-blur-md p-2 rounded-md shadow-xl border border-border/80 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 animate-in fade-in-50 slide-in-from-bottom-2">
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground text-center mb-1.5 flex items-center justify-center gap-1">
-              <ShoppingBag className="size-3 text-primary" /> Chọn Size nhanh
+              <ShoppingBag className="size-3 text-muted-foreground" /> CHỌN SIZE NHANH
             </p>
             <div className="grid grid-cols-4 sm:grid-cols-4 gap-1 text-center">
               {displaySizes.map((sz) => {
@@ -223,15 +239,25 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
                 const isAvailable = matchedVariant && matchedVariant.available > 0;
 
                 if (isAvailable && matchedVariant) {
+                  const isCurrentlyAdding = addingVariantId === matchedVariant.variantId;
                   return (
                     <button
                       key={sz}
                       type="button"
+                      disabled={!!addingVariantId}
                       onClick={(e) => handleQuickAddToCart(e, matchedVariant)}
-                      className="h-8 flex items-center justify-center rounded border border-border/80 bg-background text-xs font-bold text-foreground transition-all duration-150 hover:bg-primary hover:text-primary-foreground hover:border-primary active:scale-95 shadow-2xs"
-                      title={`Thêm Size ${sz} (${matchedVariant.colorName}) vào giỏ`}
+                      className={cn(
+                        "h-8 flex items-center justify-center rounded border border-border/80 bg-background text-xs font-bold text-foreground transition-all duration-150 hover:bg-black hover:text-white hover:border-black dark:hover:bg-white dark:hover:text-black dark:hover:border-white active:scale-95 shadow-2xs",
+                        isCurrentlyAdding && "bg-black text-white border-black dark:bg-white dark:text-black dark:border-white cursor-wait",
+                        addingVariantId && !isCurrentlyAdding && "opacity-40 cursor-not-allowed pointer-events-none",
+                      )}
+                      title={isCurrentlyAdding ? "Đang thêm vào giỏ..." : `Thêm Size ${sz} (${matchedVariant.colorName}) vào giỏ`}
                     >
-                      {sz}
+                      {isCurrentlyAdding ? (
+                        <span className="size-3.5 border-2 border-white/30 border-t-white dark:border-black/30 dark:border-t-black rounded-full animate-spin" />
+                      ) : (
+                        sz
+                      )}
                     </button>
                   );
                 }

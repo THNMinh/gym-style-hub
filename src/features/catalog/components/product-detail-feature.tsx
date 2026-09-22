@@ -41,6 +41,7 @@ export function ProductDetailFeature({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [zoomImageIndex, setZoomImageIndex] = useState<number | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     if (!selectedColor && colors[0]?.[0]) {
@@ -133,7 +134,7 @@ export function ProductDetailFeature({ product }: { product: Product }) {
     queryFn: () => getRelatedProducts(product),
   });
 
-  function handleAdd() {
+  async function handleAdd() {
     if (!user) {
       toast.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng", {
         action: {
@@ -155,8 +156,18 @@ export function ProductDetailFeature({ product }: { product: Product }) {
       toast.error("Size này đã hết hàng");
       return;
     }
-    addItem(product, selectedVariant, quantity);
-    toast.success(`Đã thêm ${product.name} (${selectedColor} / ${selectedVariant.size}) vào giỏ`);
+
+    if (isAdding) return;
+
+    try {
+      setIsAdding(true);
+      await addItem(product, selectedVariant, quantity);
+      toast.success(`Đã thêm ${product.name} (${selectedColor} / ${selectedVariant.size}) vào giỏ`);
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể thêm vào giỏ hàng. Vui lòng thử lại!");
+    } finally {
+      setIsAdding(false);
+    }
   }
 
   return (
@@ -374,11 +385,11 @@ export function ProductDetailFeature({ product }: { product: Product }) {
             ) : null}
             <Button
               size="lg"
-              className="h-11 flex-1 text-sm"
+              className="h-11 flex-1 text-sm font-bold"
               onClick={handleAdd}
-              disabled={!hasVariantData}
+              disabled={!hasVariantData || isAdding}
             >
-              Thêm vào giỏ
+              {isAdding ? "Đang thêm vào giỏ..." : "Thêm vào giỏ"}
             </Button>
             <button
               type="button"

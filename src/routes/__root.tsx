@@ -17,6 +17,7 @@ import { AdminReturnBar } from "@/components/layout/admin-return-bar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Toaster } from "@/components/ui/sonner";
+import { CartDrawer } from "@/features/cart/components/cart-drawer";
 
 function NotFoundComponent() {
   return (
@@ -135,6 +136,7 @@ function RootComponent() {
         <Outlet />
       </main>
       {!isAdminPath && <SiteFooter />}
+      {!isAdminPath && <CartDrawer />}
       <Toaster />
     </QueryClientProvider>
   );

@@ -20,6 +20,23 @@ export function CartFeature() {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
 
+  const handleUpdateQuantity = async (id: string, quantity: number) => {
+    try {
+      await updateQuantity(id, quantity);
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể cập nhật số lượng.");
+    }
+  };
+
+  const handleRemoveItem = async (id: string) => {
+    try {
+      await removeItem(id);
+      toast.success("Đã xóa sản phẩm khỏi giỏ hàng");
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể xóa sản phẩm.");
+    }
+  };
+
   const productIds = useMemo(() => Array.from(new Set(lines.map((l) => l.productId))), [lines]);
 
   const productsQuery = useQuery({
@@ -121,7 +138,7 @@ export function CartFeature() {
                         type="button"
                         aria-label="Giảm"
                         className="grid size-9 place-items-center"
-                        onClick={() => updateQuantity(line.cartItemId, line.quantity - 1)}
+                        onClick={() => handleUpdateQuantity(line.cartItemId, line.quantity - 1)}
                       >
                         <Minus className="size-3.5" />
                       </button>
@@ -130,14 +147,14 @@ export function CartFeature() {
                         type="button"
                         aria-label="Tăng"
                         className="grid size-9 place-items-center"
-                        onClick={() => updateQuantity(line.cartItemId, line.quantity + 1)}
+                        onClick={() => handleUpdateQuantity(line.cartItemId, line.quantity + 1)}
                       >
                         <Plus className="size-3.5" />
                       </button>
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeItem(line.cartItemId)}
+                      onClick={() => handleRemoveItem(line.cartItemId)}
                       className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="size-3.5" /> Xoá
