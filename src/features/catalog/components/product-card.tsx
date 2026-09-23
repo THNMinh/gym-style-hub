@@ -16,7 +16,7 @@ const STANDARD_SIZES = ["XXS", "XS", "S", "M", "L", "XL", "XXL"];
 
 interface ProductCardProps {
   product: Product;
-  selectedColor?: string;
+  selectedColor?: string | string[];
 }
 
 export function ProductCard({ product, selectedColor }: ProductCardProps) {
@@ -42,45 +42,101 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
   }, [product.variants]);
 
   const defaultColorName = useMemo(() => {
+    let targets: string[] = [];
     if (selectedColor) {
-      const q = selectedColor.trim().toLowerCase();
-
-      // 1. Khớp chính xác tên màu
-      for (const name of colorMap.keys()) {
-        if (name.toLowerCase() === q) return name;
+      if (Array.isArray(selectedColor)) {
+        targets = selectedColor.map((s) => s.trim().toLowerCase()).filter(Boolean);
+      } else {
+        targets = selectedColor.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
       }
+    } else if (product.name.toLowerCase().includes("devant")) {
+      // Tự động ưu tiên màu Violet hoặc Royal Blue cho dòng sản phẩm Devant
+      targets = ["violet", "royal blue", "blue", "purple"];
+    }
 
-      // 2. Khớp chuỗi chứa từ khóa (ví dụ "pink" trong "Soft Pink", "Rose Pink", "Poise Pink", "Pink")
-      for (const name of colorMap.keys()) {
-        const lower = name.toLowerCase();
-        if (lower.includes(q) || q.includes(lower)) {
-          return name;
+    if (targets.length > 0) {
+      // 1. Khớp chính xác tên màu
+      for (const target of targets) {
+        for (const name of colorMap.keys()) {
+          if (name.toLowerCase() === target) return name;
         }
       }
 
-      // 3. Khớp các từ đồng nghĩa hoặc tiếng Việt (pink <-> hồng, rose, magenta)
-      if (q.includes("pink") || q.includes("hồng")) {
+      // 2. Khớp chuỗi chứa từ khóa (ví dụ "violet" trong "Violet", "royal blue" trong "Royal Blue")
+      for (const target of targets) {
         for (const name of colorMap.keys()) {
           const lower = name.toLowerCase();
-          if (
-            lower.includes("pink") ||
-            lower.includes("hồng") ||
-            lower.includes("magenta") ||
-            lower.includes("rose")
-          ) {
+          if (lower.includes(target) || target.includes(lower)) {
             return name;
+          }
+        }
+      }
+
+      // 3. Khớp các từ đồng nghĩa hoặc tiếng Việt
+      for (const target of targets) {
+        if (target.includes("pink") || target.includes("hồng")) {
+          for (const name of colorMap.keys()) {
+            const lower = name.toLowerCase();
+            if (
+              lower.includes("pink") ||
+              lower.includes("hồng") ||
+              lower.includes("magenta") ||
+              lower.includes("rose")
+            ) {
+              return name;
+            }
+          }
+        }
+        if (target.includes("violet") || target.includes("purple") || target.includes("tím")) {
+          for (const name of colorMap.keys()) {
+            const lower = name.toLowerCase();
+            if (
+              lower.includes("violet") ||
+              lower.includes("purple") ||
+              lower.includes("tím") ||
+              lower.includes("lilac")
+            ) {
+              return name;
+            }
+          }
+        }
+        if (target.includes("royal blue") || target.includes("blue") || target.includes("xanh")) {
+          for (const name of colorMap.keys()) {
+            const lower = name.toLowerCase();
+            if (
+              lower.includes("royal blue") ||
+              lower.includes("blue") ||
+              lower.includes("cobalt") ||
+              lower.includes("navy")
+            ) {
+              return name;
+            }
           }
         }
       }
     }
 
     return colorMap.keys().next().value || "";
-  }, [selectedColor, colorMap]);
+  }, [selectedColor, colorMap, product.name]);
 
-  const [activeColor, setActiveColor] = useState<string>(defaultColorName || selectedColor || "");
+  const [activeColor, setActiveColor] = useState<string>(defaultColorName || (typeof selectedColor === "string" ? selectedColor : "") || "");
   const currentColorName = activeColor || defaultColorName;
 
-  // Tự động đồng bộ màu đang chọn khi defaultColorName thay đổi (ví dụ khi user bấm vào bộ lọc màu Get 'Em In Pink)
+  // Sắp xếp các chấm màu: ưu tiên đưa màu mặc định (được ưu tiên như Violet, Royal Blue, Pink...) lên đầu tiên ở trước
+  const sortedColorEntries = useMemo(() => {
+    const entries = Array.from(colorMap.entries());
+    if (!defaultColorName) return entries;
+    const defLower = defaultColorName.toLowerCase();
+    return [...entries].sort((a, b) => {
+      const aMatch = a[0].toLowerCase() === defLower;
+      const bMatch = b[0].toLowerCase() === defLower;
+      if (aMatch && !bMatch) return -1;
+      if (!aMatch && bMatch) return 1;
+      return 0;
+    });
+  }, [colorMap, defaultColorName]);
+
+  // Tự động đồng bộ màu đang chọn khi defaultColorName thay đổi (ví dụ khi user bấm vào bộ lọc màu Get 'Em In Pink hoặc Devant)
   useEffect(() => {
     if (defaultColorName) {
       setActiveColor(defaultColorName);
@@ -384,7 +440,7 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
           {/* Color Swatches */}
           {colorMap.size > 1 && (
             <div className="flex items-center gap-1.5 pt-1.5">
-              {Array.from(colorMap.entries()).map(([cName, { hex }]) => (
+              {sortedColorEntries.map(([cName, { hex }]) => (
                 <button
                   key={cName}
                   type="button"

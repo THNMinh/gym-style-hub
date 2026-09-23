@@ -385,8 +385,10 @@ export function FeaturedFeature() {
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-6 lg:grid-cols-4">
             {products.map((product) => {
               const preferredColor =
-                currentCard?.query?.colors?.[0] ||
-                (currentCard?.id === "women-pink" ? "pink" : undefined);
+                currentCard?.id === "men-devant"
+                  ? ["violet", "royal blue", "blue", "purple"]
+                  : currentCard?.query?.colors?.[0] ||
+                    (currentCard?.id === "women-pink" ? "pink" : undefined);
 
               return (
                 <ProductCard

@@ -30,10 +30,23 @@ export function ProductDetailFeature({ product }: { product: Product }) {
   const removeId = useWishlistStore((s) => s.removeId);
   const user = useAuthStore((s) => s.user);
 
-  const colors = useMemo(
-    () => [...new Map(product.variants.map((v) => [v.colorName, v.colorHex])).entries()],
-    [product],
-  );
+  const colors = useMemo(() => {
+    const entries = [...new Map(product.variants.map((v) => [v.colorName, v.colorHex])).entries()];
+    if (product.name.toLowerCase().includes("devant")) {
+      return [...entries].sort((a, b) => {
+        const aLow = a[0].toLowerCase();
+        const bLow = b[0].toLowerCase();
+        const aIsPrio =
+          aLow.includes("violet") || aLow.includes("royal blue") || aLow.includes("purple") || aLow.includes("blue");
+        const bIsPrio =
+          bLow.includes("violet") || bLow.includes("royal blue") || bLow.includes("purple") || bLow.includes("blue");
+        if (aIsPrio && !bIsPrio) return -1;
+        if (!aIsPrio && bIsPrio) return 1;
+        return 0;
+      });
+    }
+    return entries;
+  }, [product]);
   const hasVariantData = product.variants.length > 0;
 
   const [selectedColor, setSelectedColor] = useState<string | null>(() => colors[0]?.[0] || null);
