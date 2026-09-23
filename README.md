@@ -1,638 +1,112 @@
-# Gym Style Hub
+# 🏋️‍♂️ GymKitten – Premium Fitness E-Commerce Frontend
 
-bạn có thể giúp tôi tạo 1 bản clone của Gymshark được không ? và nó sẽ dựa trên cấu trúc được mô tả chi tiết trong file markdown này. 
-Cũng như bên dưới là các entity hiện có ở server 
+[![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite)](https://vitejs.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
+[![TanStack Router](https://img.shields.io/badge/TanStack_Router-v1-FF4154)](https://tanstack.com/router)
+[![TanStack Query](https://img.shields.io/badge/TanStack_Query-v5-FF4154)](https://tanstack.com/query)
 
-https://row.gymshark.com/
+**GymKitten Web Client** là giao diện thương mại điện tử thời trang thể thao cao cấp lấy cảm hứng từ thương hiệu Gymshark. Dự án được thiết kế chuẩn mực với phong cách hiện đại, tối giản và hiệu năng cao, tích hợp mượt mà với hệ thống RESTful Web API từ Backend [.NET 8](https://github.com/THNMinh/GymKitten).
 
-https://row.gymshark.com/products/gymshark-devant-seamless-t-shirt-ss-tops-purple-aw26
+🔗 **Live Demo:** [https://gym-style-hub.vercel.app/](https://gym-style-hub.vercel.app/)  
+🔗 **Backend Repository:** [GymKitten .NET 8 Backend](https://github.com/THNMinh/GymKitten)
 
+---
 
--- ==========================================
+## ✨ Điểm nổi bật về Trải nghiệm & Tính năng (Features)
 
--- GYMKITTEN E-COMMERCE DATABASE (POSTGRESQL)
+### 1. Catalog & Bộ lọc thông minh (Smart Filtering)
+- **Lọc đa tiêu chí:** Hỗ trợ lọc tức thì theo Giới tính (Men, Women, Unisex), Danh mục, Form dáng (Oversized, Slim, Muscle fit), Mức giá và Tỷ lệ giảm giá (Sale 50%+).
+- **Color Swatches tương tác:** Hiển thị trực quan các chấm màu (Hex code chuẩn) bên dưới card sản phẩm. Click vào chấm màu sẽ tự động đổi hình ảnh và cập nhật SKU tương ứng.
+- **Bảng Size Guide chuẩn xác:** Tra cứu số đo theo cm (Ngực, Eo, Mông, Chiều cao) cho từng size (S, M, L, XL...).
 
--- ==========================================
+### 2. Bộ sưu tập Nổi bật & Collab Series
+- **Athlete Collabs (`/collab`):** Không gian dành riêng cho các bộ sưu tập hợp tác với vận động viên thể hình nổi tiếng: *David Laid*, *Chris Bumstead (CBUM)*, *Carlos Belcast*.
+- **Featured Highlights (`/featured`):** Trình diễn các dòng sản phẩm đặc trưng: *Power Collection*, *Cosy Luxe*, *Devant Series* và *Get 'Em In Pink*.
 
--- 1. CREATE SCHEMAS
+### 3. Quy trình Đặt hàng & Thanh toán (Checkout Flow)
+- **Mini-cart Drawer:** Ngăn kéo giỏ hàng tiện lợi, thêm nhanh sản phẩm theo size mà không cần rời trang hiện tại.
+- **Mã giảm giá (Coupon):** Kiểm tra và áp dụng voucher trực tiếp vào tổng tiền thanh toán.
+- **Cổng thanh toán MoMo & COD:** Hỗ trợ quét mã QR MoMo và thanh toán khi nhận hàng.
 
-CREATE SCHEMA IF NOT EXISTS identity;
+### 4. Quản lý Tài khoản & Đơn hàng (User Portal)
+- Đăng ký tài khoản với quy trình **xác thực mã OTP 6 số qua email**.
+- Xem lịch sử đơn hàng, tra cứu tiến trình vận chuyển theo thời gian thực.
+- Đánh giá sản phẩm đã mua kèm số sao và nhận xét chi tiết.
+- Quản lý sổ địa chỉ giao hàng (Thêm, sửa, xóa, đặt làm mặc định).
 
-CREATE SCHEMA IF NOT EXISTS catalog;
+---
 
-CREATE SCHEMA IF NOT EXISTS inventory;
+## 🛠 Công nghệ sử dụng (Tech Stack)
 
-CREATE SCHEMA IF NOT EXISTS "order";
+| Công nghệ | Vai trò trong dự án |
+|---|---|
+| **React 18 & Vite** | Nền tảng xây dựng SPA & SSR tối ưu tốc độ tải trang |
+| **TypeScript** | Định kiểu tĩnh an toàn, đồng bộ schema từ backend |
+| **TanStack Router** | Điều hướng type-safe, quản lý URL Search Params chuyên sâu |
+| **TanStack Query (React Query)** | Quản lý server state, tự động cache, refetch và invalidate queries |
+| **Tailwind CSS & Radix UI** | Thiết kế giao diện hiện đại, responsive hoàn hảo trên Mobile & Desktop |
+| **SignalR Client** | Nhận thông báo đơn hàng và đánh giá thời gian thực qua WebSocket |
+| **Zustand** | Quản lý state giỏ hàng (Cart) và phiên đăng nhập (Auth session) |
 
-CREATE SCHEMA IF NOT EXISTS promotion;
+---
 
-CREATE SCHEMA IF NOT EXISTS social_proof;
+## 🔑 Tài khoản Demo
 
-CREATE SCHEMA IF NOT EXISTS payment;
+Bạn có thể sử dụng các tài khoản demo dưới đây để trải nghiệm ngay hệ thống:
 
-CREATE SCHEMA IF NOT EXISTS system;
+| Vai trò | Email đăng nhập | Mật khẩu |
+|---|---|---|
+| **Khách hàng (Customer)** | `luan@gymkitten.com` | `Luan@123` |
+| **Quản trị viên (Admin)** | `davidlaid@gymkitten.com` | `DavidLaid@123` |
 
--- 2. SCHEMA: identity
+---
 
-CREATE TABLE identity.Users (
+## 🚀 Khởi chạy dự án Local
 
-    UserId UUID PRIMARY KEY,
+### Yêu cầu tiên quyết:
+- **Node.js** >= 18.x
+- **npm** hoặc **pnpm / yarn**
 
-    Email VARCHAR(255) NOT NULL UNIQUE,
+### Các bước cài đặt:
 
-    PasswordHash VARCHAR(255) NULL,
+1. **Clone repository:**
+   ```bash
+   git clone https://github.com/THNMinh/gym-style-hub.git
+   cd gym-style-hub
+   ```
 
-    FullName VARCHAR(100) NULL,
+2. **Cài đặt dependencies:**
+   ```bash
+   npm install
+   ```
 
-    Phone VARCHAR(20) NULL,
+3. **Cấu hình môi trường (`.env`):**
+   Tạo file `.env` ở thư mục gốc:
+   ```env
+   # Kết nối Backend Render (Mặc định)
+   VITE_API_URL=https://gymkitten-api.onrender.com
 
-    AvatarUrl VARCHAR(500) NULL,
+   # Hoặc kết nối Backend Local
+   # VITE_API_URL=http://localhost:5000
+   ```
 
-    Role VARCHAR(20) NOT NULL DEFAULT 'Customer',
+4. **Khởi chạy Development Server:**
+   ```bash
+   npm run dev
+   ```
+   Mở trình duyệt tại địa chỉ: `http://localhost:8081`
 
-    IdentityId VARCHAR(255) NULL UNIQUE,
+5. **Build Production:**
+   ```bash
+   npm run build
+   ```
 
-    IsEmailVerified BOOLEAN NOT NULL DEFAULT FALSE,
+---
 
-    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+## ☁️ Triển khai (Deployment)
 
-    FcmToken VARCHAR(500) NULL,
+- Ứng dụng được triển khai trực tiếp trên **Vercel** với cơ chế tự động CI/CD: Mọi commit được push lên nhánh chính sẽ tự động được build, optimize và deploy tới mạng lưới toàn cầu (Edge CDN).
+- Live URL: [https://gym-style-hub.vercel.app/](https://gym-style-hub.vercel.app/)
 
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE identity.UserAddresses (
-
-    AddressId UUID PRIMARY KEY,
-
-    UserId UUID NOT NULL REFERENCES identity.Users(UserId) ON DELETE CASCADE,
-
-    ReceiverName VARCHAR(100) NOT NULL,
-
-    PhoneNumber VARCHAR(20) NOT NULL,
-
-    AddressLine1 VARCHAR(255) NOT NULL,
-
-    Ward VARCHAR(100) NOT NULL,
-
-    District VARCHAR(100) NOT NULL,
-
-    City VARCHAR(100) NOT NULL,
-
-    IsDefault BOOLEAN NOT NULL DEFAULT FALSE,
-
-    AddressType VARCHAR(20) NOT NULL DEFAULT 'Home',
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE identity.RefreshTokens (
-
-    RefreshTokenId UUID PRIMARY KEY,
-
-    UserId UUID NOT NULL REFERENCES identity.Users(UserId) ON DELETE CASCADE,
-
-    Token VARCHAR(500) NOT NULL UNIQUE,
-
-    JwtId VARCHAR(255) NOT NULL,
-
-    IsUsed BOOLEAN NOT NULL DEFAULT FALSE,
-
-    IsRevoked BOOLEAN NOT NULL DEFAULT FALSE,
-
-    ExpiryDate TIMESTAMPTZ NOT NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
--- 3. SCHEMA: catalog
-
-CREATE TABLE catalog.Categories (
-
-    CategoryId UUID PRIMARY KEY,
-
-    ParentCategoryId UUID NULL REFERENCES catalog.Categories(CategoryId) ON DELETE SET NULL,
-
-    Name VARCHAR(100) NOT NULL,
-
-    Slug VARCHAR(150) NOT NULL UNIQUE,
-
-    Description TEXT NULL,
-
-    DisplayOrder INT NOT NULL DEFAULT 0,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE catalog.Products (
-
-    ProductId UUID PRIMARY KEY,
-
-    CategoryId UUID NOT NULL REFERENCES catalog.Categories(CategoryId) ON DELETE RESTRICT,
-
-    Name VARCHAR(200) NOT NULL,
-
-    Slug VARCHAR(250) NOT NULL UNIQUE,
-
-    Description TEXT NULL,
-
-    FitType VARCHAR(50) NULL,
-
-    Gender VARCHAR(20) NOT NULL DEFAULT 'Unisex',
-
-    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE catalog.ProductVariants (
-
-    VariantId UUID PRIMARY KEY,
-
-    ProductId UUID NOT NULL REFERENCES catalog.Products(ProductId) ON DELETE CASCADE,
-
-    Sku VARCHAR(50) NOT NULL UNIQUE,
-
-    ColorName VARCHAR(50) NOT NULL,
-
-    ColorHex VARCHAR(10) NULL,
-
-    Size VARCHAR(10) NOT NULL,
-
-    Price DECIMAL(10,2) NOT NULL,
-
-    OriginalPrice DECIMAL(10,2) NULL,
-
-    WeightGrams INT NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE catalog.ProductImages (
-
-    ImageId UUID PRIMARY KEY,
-
-    ProductId UUID NOT NULL REFERENCES catalog.Products(ProductId) ON DELETE CASCADE,
-
-    VariantId UUID NULL REFERENCES catalog.ProductVariants(VariantId) ON DELETE SET NULL,
-
-    ImageUrl VARCHAR(500) NOT NULL,
-
-    DisplayOrder INT NOT NULL DEFAULT 0,
-
-    IsPrimary BOOLEAN NOT NULL DEFAULT FALSE,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE catalog.SizeGuides (
-
-    GuideId UUID PRIMARY KEY,
-
-    ProductId UUID NOT NULL REFERENCES catalog.Products(ProductId) ON DELETE CASCADE,
-
-    Size VARCHAR(10) NOT NULL,
-
-    ChestCm VARCHAR(50) NULL,
-
-    WaistCm VARCHAR(50) NULL,
-
-    HipsCm VARCHAR(50) NULL,
-
-    HeightRangeCm VARCHAR(50) NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
--- 4. SCHEMA: inventory
-
-CREATE TABLE inventory.InventoryItems (
-
-    InventoryId UUID PRIMARY KEY,
-
-    VariantId UUID NOT NULL UNIQUE REFERENCES catalog.ProductVariants(VariantId) ON DELETE CASCADE,
-
-    QuantityOnHand INT NOT NULL DEFAULT 0,
-
-    QuantityReserved INT NOT NULL DEFAULT 0,
-
-    SafetyStock INT NOT NULL DEFAULT 5,
-
-    RowVersion INT NOT NULL DEFAULT 1,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE inventory.InventoryTransactions (
-
-    TransactionId UUID PRIMARY KEY,
-
-    VariantId UUID NOT NULL REFERENCES catalog.ProductVariants(VariantId) ON DELETE RESTRICT,
-
-    QuantityChange INT NOT NULL,
-
-    Type VARCHAR(30) NOT NULL,
-
-    ReferenceId VARCHAR(100) NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
--- 5. SCHEMA: promotion
-
-CREATE TABLE promotion.Coupons (
-
-    CouponId UUID PRIMARY KEY,
-
-    Code VARCHAR(50) NOT NULL UNIQUE,
-
-    DiscountType VARCHAR(20) NOT NULL,
-
-    DiscountValue DECIMAL(10,2) NOT NULL,
-
-    MinOrderValue DECIMAL(10,2) NOT NULL DEFAULT 0,
-
-    MaxDiscountAmount DECIMAL(10,2) NULL,
-
-    UsageLimit INT NULL,
-
-    UsedCount INT NOT NULL DEFAULT 0,
-
-    StartDate TIMESTAMPTZ NOT NULL,
-
-    EndDate TIMESTAMPTZ NOT NULL,
-
-    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
--- 6. SCHEMA: order
-
-CREATE TABLE "order".Carts (
-
-    CartId UUID PRIMARY KEY,
-
-    UserId UUID NULL REFERENCES identity.Users(UserId) ON DELETE CASCADE,
-
-    SessionId VARCHAR(100) NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE "order".CartItems (
-
-    CartItemId UUID PRIMARY KEY,
-
-    CartId UUID NOT NULL REFERENCES "order".Carts(CartId) ON DELETE CASCADE,
-
-    VariantId UUID NOT NULL REFERENCES catalog.ProductVariants(VariantId) ON DELETE CASCADE,
-
-    Quantity INT NOT NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE "order".Orders (
-
-    OrderId UUID PRIMARY KEY,
-
-    OrderCode VARCHAR(30) NOT NULL UNIQUE,
-
-    UserId UUID NULL REFERENCES identity.Users(UserId) ON DELETE RESTRICT,
-
-    ShippingAddress TEXT NOT NULL,
-
-    SubTotal DECIMAL(10,2) NOT NULL,
-
-    ShippingFee DECIMAL(10,2) NOT NULL DEFAULT 0,
-
-    DiscountAmount DECIMAL(10,2) NOT NULL DEFAULT 0,
-
-    TotalAmount DECIMAL(10,2) NOT NULL,
-
-    CurrentStatus VARCHAR(30) NOT NULL,
-
-    PaymentMethod VARCHAR(20) NOT NULL,
-
-    PaymentStatus VARCHAR(20) NOT NULL DEFAULT 'Unpaid',
-
-    CustomerNote TEXT NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE "order".OrderItems (
-
-    OrderItemId UUID PRIMARY KEY,
-
-    OrderId UUID NOT NULL REFERENCES "order".Orders(OrderId) ON DELETE CASCADE,
-
-    VariantId UUID NOT NULL REFERENCES catalog.ProductVariants(VariantId) ON DELETE RESTRICT,
-
-    Sku VARCHAR(50) NOT NULL,
-
-    ProductName VARCHAR(255) NOT NULL,
-
-    UnitPrice DECIMAL(10,2) NOT NULL,
-
-    Quantity INT NOT NULL,
-
-    TotalPrice DECIMAL(10,2) NOT NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE "order".OrderTrackingHistories (
-
-    TrackingId UUID PRIMARY KEY,
-
-    OrderId UUID NOT NULL REFERENCES "order".Orders(OrderId) ON DELETE CASCADE,
-
-    Status VARCHAR(30) NOT NULL,
-
-    Title VARCHAR(150) NOT NULL,
-
-    Description TEXT NULL,
-
-    Location VARCHAR(150) NULL,
-
-    Timestamp TIMESTAMPTZ NOT NULL,
-
-    UpdatedBy VARCHAR(50) NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE promotion.CouponUsages (
-
-    UsageId UUID PRIMARY KEY,
-
-    CouponId UUID NOT NULL REFERENCES promotion.Coupons(CouponId) ON DELETE CASCADE,
-
-    UserId UUID NOT NULL REFERENCES identity.Users(UserId) ON DELETE CASCADE,
-
-    OrderId UUID NOT NULL REFERENCES "order".Orders(OrderId) ON DELETE CASCADE,
-
-    UsedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
--- 7. SCHEMA: social_proof
-
-CREATE TABLE social_proof.ProductReviews (
-
-    ReviewId UUID PRIMARY KEY,
-
-    ProductId UUID NOT NULL REFERENCES catalog.Products(ProductId) ON DELETE CASCADE,
-
-    UserId UUID NOT NULL REFERENCES identity.Users(UserId) ON DELETE RESTRICT,
-
-    OrderId UUID NOT NULL REFERENCES "order".Orders(OrderId) ON DELETE RESTRICT,
-
-    Rating INT NOT NULL CHECK (Rating >= 1 AND Rating <= 5),
-
-    Comment TEXT NULL,
-
-    FitFeedback VARCHAR(20) NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE social_proof.ReviewMedias (
-
-    MediaId UUID PRIMARY KEY,
-
-    ReviewId UUID NOT NULL REFERENCES social_proof.ProductReviews(ReviewId) ON DELETE CASCADE,
-
-    MediaUrl VARCHAR(500) NOT NULL,
-
-    MediaType VARCHAR(20) NOT NULL DEFAULT 'Image',
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE social_proof.Wishlists (
-
-    WishlistId UUID PRIMARY KEY,
-
-    UserId UUID NOT NULL REFERENCES identity.Users(UserId) ON DELETE CASCADE,
-
-    ProductId UUID NOT NULL REFERENCES catalog.Products(ProductId) ON DELETE CASCADE,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL,
-
-    CONSTRAINT uq_wishlist_user_product UNIQUE (UserId, ProductId)
-
-);
-
--- 8. SCHEMA: payment & system
-
-CREATE TABLE payment.PaymentTransactions (
-
-    TransactionId UUID PRIMARY KEY,
-
-    OrderId UUID NOT NULL REFERENCES "order".Orders(OrderId) ON DELETE RESTRICT,
-
-    Gateway VARCHAR(50) NOT NULL,
-
-    GatewayTransactionId VARCHAR(100) NULL,
-
-    Amount DECIMAL(10,2) NOT NULL,
-
-    Status VARCHAR(20) NOT NULL,
-
-    PaymentDate TIMESTAMPTZ NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE system.Notifications (
-
-    NotificationId UUID PRIMARY KEY,
-
-    UserId UUID NOT NULL REFERENCES identity.Users(UserId) ON DELETE CASCADE,
-
-    Title VARCHAR(200) NOT NULL,
-
-    Content TEXT NOT NULL,
-
-    Type VARCHAR(50) NOT NULL,
-
-    IsRead BOOLEAN NOT NULL DEFAULT FALSE,
-
-    TargetUrl VARCHAR(500) NULL,
-
-    ReadAt TIMESTAMPTZ NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
-CREATE TABLE system.SystemLogs (
-
-    LogId UUID PRIMARY KEY,
-
-    UserId UUID NULL,
-
-    LogLevel VARCHAR(20) NOT NULL,
-
-    Action VARCHAR(100) NOT NULL,
-
-    Message TEXT NOT NULL,
-
-    IpAddress VARCHAR(50) NULL,
-
-    UserAgent TEXT NULL,
-
-    CreatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    UpdatedAt TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    DeletedAt TIMESTAMPTZ NULL
-
-);
-
--- 9. INDEXES FOR PERFORMANCE
-
-CREATE INDEX idx_products_category ON catalog.Products(CategoryId) WHERE DeletedAt IS NULL;
-
-CREATE INDEX idx_variants_product ON catalog.ProductVariants(ProductId) WHERE DeletedAt IS NULL;
-
-CREATE INDEX idx_orders_user ON "order".Orders(UserId) WHERE DeletedAt IS NULL;
-
-CREATE INDEX idx_orders_code ON "order".Orders(OrderCode);
-
-CREATE INDEX idx_tracking_order ON "order".OrderTrackingHistories(OrderId);
-
-CREATE INDEX idx_inventory_variant ON inventory.InventoryItems(VariantId);
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/aa4291cf-60ac-4524-bb99-17db96ab3b1b).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
