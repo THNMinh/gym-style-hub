@@ -6,6 +6,8 @@ type ProductSearch = {
   category?: string;
   q?: string;
   sort?: string;
+  minDiscountPercent?: number;
+  sale?: boolean;
 };
 
 export const Route = createFileRoute("/products/")({
@@ -14,6 +16,10 @@ export const Route = createFileRoute("/products/")({
     ...(typeof search["category"] === "string" ? { category: search["category"] } : {}),
     ...(typeof search["q"] === "string" ? { q: search["q"] } : {}),
     ...(typeof search["sort"] === "string" ? { sort: search["sort"] } : {}),
+    ...(search["minDiscountPercent"] != null
+      ? { minDiscountPercent: Number(search["minDiscountPercent"]) }
+      : {}),
+    ...(search["sale"] === true || search["sale"] === "true" ? { sale: true } : {}),
   }),
   head: () => ({
     meta: [
@@ -32,14 +38,22 @@ function ProductsPage() {
   const search = Route.useSearch();
   const gender = search.gender;
   const category = search.category;
+  const minDiscountPercent =
+    search.minDiscountPercent != null && !isNaN(search.minDiscountPercent)
+      ? search.minDiscountPercent
+      : search.sale
+        ? 50
+        : undefined;
+
   return (
     <ProductListFeature
-      key={`${gender ?? "All"}-${category ?? ""}-${search.q ?? ""}`}
+      key={`${gender ?? "All"}-${category ?? ""}-${search.q ?? ""}-${minDiscountPercent ?? ""}`}
       {...(gender === "Men" || gender === "Women" || gender === "Unisex" || gender === "All"
         ? { initialGender: gender }
         : {})}
       {...(category ? { initialCategory: category } : {})}
       {...(search.q ? { search: search.q } : {})}
+      {...(minDiscountPercent ? { initialMinDiscountPercent: minDiscountPercent } : {})}
     />
   );
 }

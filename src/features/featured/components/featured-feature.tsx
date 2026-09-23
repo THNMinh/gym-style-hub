@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Filter, Sparkles, X } from "lucide-react";
 import { getProducts } from "@/entities/catalog/services";
@@ -129,14 +130,6 @@ export function FeaturedFeature() {
       sort: "rating",
     };
 
-    if (activeFilterId === "sale-50-banner") {
-      return {
-        ...base,
-        gender: selectedGender as Gender,
-        minDiscountPercent: 50,
-      };
-    }
-
     if (currentCard) {
       return {
         ...base,
@@ -149,7 +142,7 @@ export function FeaturedFeature() {
       ...base,
       gender: selectedGender as Gender,
     };
-  }, [activeFilterId, currentCard, selectedGender]);
+  }, [currentCard, selectedGender]);
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["featured-products", productQueryArgs],
@@ -166,8 +159,6 @@ export function FeaturedFeature() {
     setSelectedGender(gender);
     setActiveFilterId(null);
   };
-
-  const isSale50Active = activeFilterId === "sale-50-banner";
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -212,13 +203,13 @@ export function FeaturedFeature() {
         </div>
 
         {/* Big Gymshark-Style 50% Sale Promo Banner */}
-        <div
-          onClick={() => setActiveFilterId((prev) => (prev === "sale-50-banner" ? null : "sale-50-banner"))}
-          className={`group relative mt-8 cursor-pointer overflow-hidden border transition-all duration-300 ${
-            isSale50Active
-              ? "border-foreground ring-2 ring-foreground ring-offset-2"
-              : "border-border hover:border-foreground/60"
-          }`}
+        <Link
+          to="/products"
+          search={{
+            minDiscountPercent: 50,
+            ...(selectedGender === "Men" || selectedGender === "Women" ? { gender: selectedGender } : {}),
+          }}
+          className="group relative mt-8 block cursor-pointer overflow-hidden border border-border hover:border-foreground/60 transition-all duration-300"
         >
           <div className="relative aspect-[16/7] sm:aspect-[21/8] lg:aspect-[28/8] w-full overflow-hidden bg-muted">
             <img
@@ -227,38 +218,8 @@ export function FeaturedFeature() {
               className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
               loading="eager"
             />
-            {/* Subtle Gradient Overlay with Gymshark Typography */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent flex flex-col justify-end p-5 sm:p-8 md:p-10 text-white">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="bg-red-600 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest px-2.5 py-1">
-                  UP TO 50% OFF
-                </span>
-                <span className="text-[10px] sm:text-xs uppercase tracking-wider text-white/90 font-bold">
-                  LIMITED TIME ONLY • LAST CHANCE STYLES
-                </span>
-              </div>
-              <div className="mt-2 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                <div>
-                  <h2 className="font-display text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tight text-white">
-                    LAST CHANCE SALE
-                  </h2>
-                  <p className="mt-1 text-xs sm:text-sm text-white/80 max-w-xl line-clamp-2">
-                    Nâng cấp đồ tập với các sản phẩm đang được giảm giá từ 50% trở lên. Số lượng có hạn!
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={isSale50Active ? "default" : "secondary"}
-                    size="sm"
-                    className="font-extrabold uppercase tracking-wider text-xs pointer-events-none"
-                  >
-                    {isSale50Active ? "Đang lọc giảm giá 50%+" : "Khám phá ngay →"}
-                  </Button>
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
+        </Link>
 
         {/* 4 Interactive Banner Cards */}
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -326,11 +287,9 @@ export function FeaturedFeature() {
           <div className="flex items-center gap-3">
             <Filter className="size-4 text-muted-foreground" />
             <h2 className="font-display text-lg font-bold uppercase tracking-tight md:text-xl">
-              {isSale50Active
-                ? "Sản phẩm giảm giá từ 50% trở lên"
-                : currentCard
-                  ? currentCard.filterLabel
-                  : `Tất cả sản phẩm nổi bật (${selectedGender})`}
+              {currentCard
+                ? currentCard.filterLabel
+                : `Tất cả sản phẩm nổi bật (${selectedGender})`}
             </h2>
             <Badge variant="outline" className="font-semibold">
               {data?.totalCount ?? 0} sản phẩm

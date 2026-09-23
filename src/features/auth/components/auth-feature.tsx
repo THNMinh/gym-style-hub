@@ -105,16 +105,20 @@ export function AuthFeature() {
       user?.role?.toLowerCase() === "admin"
     );
 
-    if (redirectUrl) {
-      if (redirectUrl.startsWith("/admin") && !isAdmin) {
-        navigate({ to: "/" });
+    if (isAdmin) {
+      navigate({ to: "/admin/dashboard" });
+      return;
+    }
+
+    if (redirectUrl && redirectUrl !== "/account" && redirectUrl !== "/auth" && redirectUrl !== "/") {
+      if (redirectUrl.startsWith("/admin")) {
+        window.location.href = "/";
       } else {
         navigate({ to: redirectUrl as any });
       }
-    } else if (isAdmin) {
-      navigate({ to: "/admin/dashboard" });
     } else {
-      navigate({ to: "/" });
+      // Về hẳn trang chủ https://gym-style-hub.vercel.app/
+      window.location.href = "/";
     }
   };
 

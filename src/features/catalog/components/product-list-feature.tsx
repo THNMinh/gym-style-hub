@@ -11,10 +11,12 @@ export function ProductListFeature({
   initialGender = "All",
   initialCategory,
   search,
+  initialMinDiscountPercent,
 }: {
   initialGender?: Gender | "All";
   initialCategory?: string;
   search?: string;
+  initialMinDiscountPercent?: number;
 }) {
   const PAGE_SIZE = 15;
   const [filters, setFilters] = useState<CatalogFilters>({
@@ -34,7 +36,7 @@ export function ProductListFeature({
   }, [initialGender, initialCategory]);
 
   const query = useQuery({
-    queryKey: ["products", filters, search, page],
+    queryKey: ["products", filters, search, page, initialMinDiscountPercent],
     queryFn: () =>
       getProducts({
         gender: filters.gender,
@@ -48,6 +50,7 @@ export function ProductListFeature({
         ...(filters.maxPrice != null ? { maxPrice: filters.maxPrice } : {}),
         ...(filters.categorySlug ? { categorySlug: filters.categorySlug } : {}),
         ...(search ? { search } : {}),
+        ...(initialMinDiscountPercent ? { minDiscountPercent: initialMinDiscountPercent } : {}),
       }),
     placeholderData: (previous) => previous,
   });
@@ -64,11 +67,17 @@ export function ProductListFeature({
   return (
     <div className="mx-auto max-w-[1800px] px-4 py-10 lg:px-8">
       <header className="mb-8">
-        <h1 className="text-4xl md:text-5xl">
-          {search ? `Kết quả cho "${search}"` : "Tất cả sản phẩm"}
+        <h1 className="text-4xl md:text-5xl font-display font-black uppercase tracking-tight">
+          {initialMinDiscountPercent
+            ? `Sản phẩm giảm giá từ ${initialMinDiscountPercent}%+`
+            : search
+              ? `Kết quả cho "${search}"`
+              : "Tất cả sản phẩm"}
         </h1>
         <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-          Bộ sưu tập đồ tập hiệu năng cao: seamless, oversized và training essentials.
+          {initialMinDiscountPercent
+            ? `Cơ hội sở hữu các sản phẩm Gymshark cao cấp với ưu đãi giảm giá từ ${initialMinDiscountPercent}% trở lên. Số lượng có hạn!`
+            : "Bộ sưu tập đồ tập hiệu năng cao: seamless, oversized và training essentials."}
         </p>
       </header>
 

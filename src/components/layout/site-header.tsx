@@ -168,7 +168,7 @@ export function SiteHeader() {
             />
           </form>
 
-          <Link to="/account" aria-label="Tài khoản" className="relative p-1">
+          <Link to={hydrated && user ? "/account" : "/auth"} aria-label="Tài khoản" className="relative p-1">
             <User className="size-5" />
             {hydrated && user ? (
               <span className="absolute -bottom-0.5 left-1/2 h-0.5 w-4 -translate-x-1/2 bg-primary" />
