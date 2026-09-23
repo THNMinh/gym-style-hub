@@ -22,9 +22,18 @@ export function ProductGrid({ products, selectedColors = [] }: ProductGridProps)
         ...new Set(
           (p.variants || [])
             .filter((v) =>
-              selectedColors.some(
-                (sc) => sc.trim().toLowerCase() === v.colorName.trim().toLowerCase()
-              )
+              selectedColors.some((sc) => {
+                const s = sc.trim().toLowerCase();
+                const c = v.colorName.trim().toLowerCase();
+                return (
+                  c === s ||
+                  c.includes(s) ||
+                  s.includes(c) ||
+                  (s === "pink" && (c.includes("pink") || c.includes("hồng") || c.includes("rose"))) ||
+                  (s === "black" && (c.includes("black") || c.includes("onyx") || c.includes("đen"))) ||
+                  (s === "blue" && (c.includes("blue") || c.includes("navy") || c.includes("cyan")))
+                );
+              })
             )
             .map((v) => v.colorName)
         ),

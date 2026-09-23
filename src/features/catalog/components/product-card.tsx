@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Heart, Star, ShoppingBag, Check } from "lucide-react";
@@ -42,12 +42,50 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
   }, [product.variants]);
 
   const defaultColorName = useMemo(() => {
-    if (selectedColor && colorMap.has(selectedColor)) return selectedColor;
+    if (selectedColor) {
+      const q = selectedColor.trim().toLowerCase();
+
+      // 1. Khớp chính xác tên màu
+      for (const name of colorMap.keys()) {
+        if (name.toLowerCase() === q) return name;
+      }
+
+      // 2. Khớp chuỗi chứa từ khóa (ví dụ "pink" trong "Soft Pink", "Rose Pink", "Poise Pink", "Pink")
+      for (const name of colorMap.keys()) {
+        const lower = name.toLowerCase();
+        if (lower.includes(q) || q.includes(lower)) {
+          return name;
+        }
+      }
+
+      // 3. Khớp các từ đồng nghĩa hoặc tiếng Việt (pink <-> hồng, rose, magenta)
+      if (q.includes("pink") || q.includes("hồng")) {
+        for (const name of colorMap.keys()) {
+          const lower = name.toLowerCase();
+          if (
+            lower.includes("pink") ||
+            lower.includes("hồng") ||
+            lower.includes("magenta") ||
+            lower.includes("rose")
+          ) {
+            return name;
+          }
+        }
+      }
+    }
+
     return colorMap.keys().next().value || "";
   }, [selectedColor, colorMap]);
 
   const [activeColor, setActiveColor] = useState<string>(defaultColorName || selectedColor || "");
   const currentColorName = activeColor || defaultColorName;
+
+  // Tự động đồng bộ màu đang chọn khi defaultColorName thay đổi (ví dụ khi user bấm vào bộ lọc màu Get 'Em In Pink)
+  useEffect(() => {
+    if (defaultColorName) {
+      setActiveColor(defaultColorName);
+    }
+  }, [defaultColorName]);
 
   // Variants filtered by active color
   const activeColorVariants = useMemo(() => {
@@ -61,13 +99,37 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
   // Find image for active color variant
   const activeImages = useMemo(() => {
     if (!currentColorName) return product.images || [];
+
+    // 1. Kiểm tra nếu có variant nào thuộc màu này có ảnh riêng (variant.imageUrl)
+    const variantWithImg = activeColorVariants.find((v) => v.imageUrl);
+    const variantImgUrl = variantWithImg?.imageUrl;
+
+    // 2. Lọc ảnh từ danh sách product.images theo variantId
     const matchedVariantIds = new Set(activeColorVariants.map((v) => v.variantId));
     const variantImgs = (product.images || []).filter(
       (img) => img.variantId && matchedVariantIds.has(img.variantId),
     );
     if (variantImgs.length > 0) return variantImgs;
+
+    // 3. Nếu không có ảnh theo variantId trong product.images, kiểm tra ảnh khớp URL
+    if (variantImgUrl) {
+      const imgMatch = (product.images || []).filter((img) => img.imageUrl === variantImgUrl);
+      if (imgMatch.length > 0) return imgMatch;
+
+      return [
+        {
+          imageId: `${product.productId}-${currentColorName}`,
+          productId: product.productId,
+          variantId: variantWithImg?.variantId ?? null,
+          imageUrl: variantImgUrl,
+          displayOrder: 1,
+          isPrimary: true,
+        },
+      ];
+    }
+
     return product.images || [];
-  }, [product.images, activeColorVariants, currentColorName]);
+  }, [product.images, activeColorVariants, currentColorName, product.productId]);
 
   const primaryImage = activeImages[0]?.imageUrl || product.images?.[0]?.imageUrl || "";
   const secondaryImage =
@@ -334,13 +396,13 @@ export function ProductCard({ product, selectedColor }: ProductCardProps) {
                   title={cName}
                   className={cn(
                     "size-4 rounded-full border transition-all duration-150 relative flex items-center justify-center",
-                    activeColor === cName
+                    currentColorName === cName
                       ? "ring-2 ring-primary ring-offset-1 border-primary scale-110"
                       : "border-border/80 hover:scale-110"
                   )}
                   style={{ backgroundColor: hex || "#111111" }}
                 >
-                  {activeColor === cName && (
+                  {currentColorName === cName && (
                     <span className={cn("size-1.5 rounded-full", hex === "#ffffff" ? "bg-black" : "bg-white")} />
                   )}
                 </button>

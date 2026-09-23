@@ -148,6 +148,7 @@ function mapListItemToProduct(item: BackendProductItem): Product {
     originalPrice: v.originalPrice ?? null,
     weightGrams: null,
     available: v.available ?? v.stockQuantity ?? (v.isAvailable ? 10 : 0),
+    imageUrl: v.variantImageUrl ?? null,
   }));
 
   return {
@@ -180,6 +181,7 @@ function mapVariantToProductVariant(v: BackendProductVariantItem): ProductVarian
     originalPrice: v.originalPrice ?? null,
     weightGrams: null,
     available: v.available ?? v.stockQuantity ?? (v.isAvailable ? 10 : 0),
+    imageUrl: v.variantImageUrl ?? null,
   };
 }
 

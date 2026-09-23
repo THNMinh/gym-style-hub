@@ -107,14 +107,14 @@ export function AuthFeature() {
 
     if (redirectUrl) {
       if (redirectUrl.startsWith("/admin") && !isAdmin) {
-        navigate({ to: "/account" });
+        navigate({ to: "/" });
       } else {
         navigate({ to: redirectUrl as any });
       }
     } else if (isAdmin) {
       navigate({ to: "/admin/dashboard" });
     } else {
-      navigate({ to: "/account" });
+      navigate({ to: "/" });
     }
   };
 

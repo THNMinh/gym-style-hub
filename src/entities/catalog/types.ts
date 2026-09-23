@@ -23,6 +23,7 @@ export interface ProductVariant {
   weightGrams: number | null;
   /** Từ inventory.InventoryItems (QuantityOnHand - QuantityReserved). */
   available: number;
+  imageUrl?: string | null;
 }
 
 export interface ProductImage {

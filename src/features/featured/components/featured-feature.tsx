@@ -8,12 +8,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-import lastChanceImg from "@/assets/image (2).jpg";
+import sale50BannerImg from "@/assets/image.png";
+import powerMenImg from "@/assets/image (7).jpg";
+import apexWomenImg from "@/assets/487034346_18503854933015250_5768974117798830766_n.jpg";
+import cosyLuxeImg from "@/assets/image (6).jpg";
 import shortsImg from "@/assets/image (1).jpg";
 import everydayImg from "@/assets/image (3).jpg";
 import muscleFitImg from "@/assets/image.jpg";
 import pinkImg from "@/assets/image (4).jpg";
-import hybridImg from "@/assets/image (5).jpg";
 import devantImg from "@/assets/26864080_1920x.jpg";
 
 interface FilterCardConfig {
@@ -30,18 +32,17 @@ export function FeaturedFeature() {
   const [selectedGender, setSelectedGender] = useState<"Women" | "Men">("Men");
   const [activeFilterId, setActiveFilterId] = useState<string | null>(null);
 
-  // Danh sách thẻ Banner cho Men
+  // Danh sách 4 thẻ cho Men
   const menCards: FilterCardConfig[] = useMemo(
     () => [
       {
-        id: "men-sale50",
-        title: "LAST CHANCE SALE COMING SOON",
-        subtitle:
-          "SEPT 17TH. 11am EDT. Up to 50% off* Last Chance styles. Your gym fits are about to hit different.",
-        image: lastChanceImg,
-        badge: "Giảm tới 50%+",
-        filterLabel: "Sản phẩm giảm giá từ 50% trở lên",
-        query: { minDiscountPercent: 50 },
+        id: "men-power",
+        title: "POWER COLLECTION",
+        subtitle: "Built for raw strength, heavy lifts, and uncompromised durability.",
+        image: powerMenImg,
+        badge: "Power Series",
+        filterLabel: "Dòng sản phẩm Power cho nam",
+        query: { gender: "Men", search: "power" },
       },
       {
         id: "men-shorts",
@@ -59,7 +60,7 @@ export function FeaturedFeature() {
         image: devantImg,
         badge: "Devant Series",
         filterLabel: "Dòng sản phẩm Devant",
-        query: {search: "devant" },
+        query: { search: "devant" },
       },
       {
         id: "men-muscle",
@@ -75,18 +76,17 @@ export function FeaturedFeature() {
     [],
   );
 
-  // Danh sách thẻ Banner cho Women
+  // Danh sách 4 thẻ cho Women
   const womenCards: FilterCardConfig[] = useMemo(
     () => [
       {
-        id: "women-sale50",
-        title: "LAST CHANCE SALE COMING SOON",
-        subtitle:
-          "SEPT 17TH. 11am EDT. Up to 50% off* Last Chance styles. Your gym fits are about to hit different.",
-        image: lastChanceImg,
-        badge: "Giảm tới 50%+",
-        filterLabel: "Sản phẩm giảm giá từ 50% trở lên",
-        query: { minDiscountPercent: 50 },
+        id: "women-apex",
+        title: "APEX SEAMLESS",
+        subtitle: "High-intensity performance with targeted heat-mapping ventilation.",
+        image: apexWomenImg,
+        badge: "Apex Series",
+        filterLabel: "Dòng sản phẩm Apex cho nữ",
+        query: { gender: "Women", search: "apex" },
       },
       {
         id: "women-everyday",
@@ -107,13 +107,13 @@ export function FeaturedFeature() {
         query: { gender: "Women", colors: ["pink"] },
       },
       {
-        id: "women-hybrid",
-        title: "THE HYBRID GIRL UNIFORM",
-        subtitle: "Relay. Looks good. Feels good. Works hard.",
-        image: hybridImg,
-        badge: "Hybrid Set",
-        filterLabel: "Set đồ tập gym nữ đa năng",
-        query: { gender: "Women" },
+        id: "women-cosy",
+        title: "COSY LUXE",
+        subtitle: "Ultra-plush premium fabrics designed for rest days and effortless style.",
+        image: cosyLuxeImg,
+        badge: "Cosy Luxe",
+        filterLabel: "Bộ sưu tập Cosy Luxe cho nữ",
+        query: { gender: "Women", search: "cosy" },
       },
     ],
     [],
@@ -126,8 +126,16 @@ export function FeaturedFeature() {
     const base: ProductListQuery = {
       page: 1,
       pageSize: 24,
-      sort: "rating", // Ưu tiên sản phẩm có review lên đầu
+      sort: "rating",
     };
+
+    if (activeFilterId === "sale-50-banner") {
+      return {
+        ...base,
+        gender: selectedGender as Gender,
+        minDiscountPercent: 50,
+      };
+    }
 
     if (currentCard) {
       return {
@@ -141,7 +149,7 @@ export function FeaturedFeature() {
       ...base,
       gender: selectedGender as Gender,
     };
-  }, [currentCard, selectedGender]);
+  }, [activeFilterId, currentCard, selectedGender]);
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["featured-products", productQueryArgs],
@@ -159,9 +167,11 @@ export function FeaturedFeature() {
     setActiveFilterId(null);
   };
 
+  const isSale50Active = activeFilterId === "sale-50-banner";
+
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Top Banner Section */}
+      {/* Top Header Section */}
       <section className="mx-auto max-w-[1600px] px-4 pt-8 md:pt-12 lg:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -198,6 +208,55 @@ export function FeaturedFeature() {
             >
               Men
             </button>
+          </div>
+        </div>
+
+        {/* Big Gymshark-Style 50% Sale Promo Banner */}
+        <div
+          onClick={() => setActiveFilterId((prev) => (prev === "sale-50-banner" ? null : "sale-50-banner"))}
+          className={`group relative mt-8 cursor-pointer overflow-hidden border transition-all duration-300 ${
+            isSale50Active
+              ? "border-foreground ring-2 ring-foreground ring-offset-2"
+              : "border-border hover:border-foreground/60"
+          }`}
+        >
+          <div className="relative aspect-[16/7] sm:aspect-[21/8] lg:aspect-[28/8] w-full overflow-hidden bg-muted">
+            <img
+              src={sale50BannerImg}
+              alt="Gymshark 50% Sale Banner"
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+              loading="eager"
+            />
+            {/* Subtle Gradient Overlay with Gymshark Typography */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent flex flex-col justify-end p-5 sm:p-8 md:p-10 text-white">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="bg-red-600 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest px-2.5 py-1">
+                  UP TO 50% OFF
+                </span>
+                <span className="text-[10px] sm:text-xs uppercase tracking-wider text-white/90 font-bold">
+                  LIMITED TIME ONLY • LAST CHANCE STYLES
+                </span>
+              </div>
+              <div className="mt-2 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                <div>
+                  <h2 className="font-display text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tight text-white">
+                    LAST CHANCE SALE
+                  </h2>
+                  <p className="mt-1 text-xs sm:text-sm text-white/80 max-w-xl line-clamp-2">
+                    Nâng cấp đồ tập với các sản phẩm đang được giảm giá từ 50% trở lên. Số lượng có hạn!
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={isSale50Active ? "default" : "secondary"}
+                    size="sm"
+                    className="font-extrabold uppercase tracking-wider text-xs pointer-events-none"
+                  >
+                    {isSale50Active ? "Đang lọc giảm giá 50%+" : "Khám phá ngay →"}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -267,14 +326,18 @@ export function FeaturedFeature() {
           <div className="flex items-center gap-3">
             <Filter className="size-4 text-muted-foreground" />
             <h2 className="font-display text-lg font-bold uppercase tracking-tight md:text-xl">
-              {currentCard ? currentCard.filterLabel : `Tất cả sản phẩm nổi bật (${selectedGender})`}
+              {isSale50Active
+                ? "Sản phẩm giảm giá từ 50% trở lên"
+                : currentCard
+                  ? currentCard.filterLabel
+                  : `Tất cả sản phẩm nổi bật (${selectedGender})`}
             </h2>
             <Badge variant="outline" className="font-semibold">
               {data?.totalCount ?? 0} sản phẩm
             </Badge>
           </div>
 
-          {currentCard && (
+          {activeFilterId && (
             <Button
               variant="ghost"
               size="sm"
@@ -320,9 +383,19 @@ export function FeaturedFeature() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-6 lg:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard key={product.productId} product={product} />
-            ))}
+            {products.map((product) => {
+              const preferredColor =
+                currentCard?.query?.colors?.[0] ||
+                (currentCard?.id === "women-pink" ? "pink" : undefined);
+
+              return (
+                <ProductCard
+                  key={`${product.productId}-${currentCard?.id ?? "all"}`}
+                  product={product}
+                  selectedColor={preferredColor}
+                />
+              );
+            })}
           </div>
         )}
       </section>

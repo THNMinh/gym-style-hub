@@ -14,6 +14,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as CollabRouteImport } from './routes/collab'
 import { Route as FeaturedRouteImport } from './routes/featured'
 import { Route as WishlistRouteImport } from './routes/wishlist'
 import { Route as AdminCatalogRouteImport } from './routes/admin/catalog'
@@ -53,6 +54,11 @@ const CartRoute = CartRouteImport.update({
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CollabRoute = CollabRouteImport.update({
+  id: '/collab',
+  path: '/collab',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeaturedRoute = FeaturedRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/collab': typeof CollabRoute
   '/featured': typeof FeaturedRoute
   '/wishlist': typeof WishlistRoute
   '/admin/catalog': typeof AdminCatalogRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/collab': typeof CollabRoute
   '/featured': typeof FeaturedRoute
   '/wishlist': typeof WishlistRoute
   '/admin/catalog': typeof AdminCatalogRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/collab': typeof CollabRoute
   '/featured': typeof FeaturedRoute
   '/wishlist': typeof WishlistRoute
   '/admin/catalog': typeof AdminCatalogRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/collab'
     | '/featured'
     | '/wishlist'
     | '/admin/catalog'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/collab'
     | '/featured'
     | '/wishlist'
     | '/admin/catalog'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/collab'
     | '/featured'
     | '/wishlist'
     | '/admin/catalog'
@@ -273,6 +285,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
+  CollabRoute: typeof CollabRoute
   FeaturedRoute: typeof FeaturedRoute
   WishlistRoute: typeof WishlistRoute
   AdminCatalogRoute: typeof AdminCatalogRoute
@@ -325,6 +338,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout'
       fullPath: '/checkout'
       preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/collab': {
+      id: '/collab'
+      path: '/collab'
+      fullPath: '/collab'
+      preLoaderRoute: typeof CollabRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/featured': {
@@ -441,6 +461,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
+  CollabRoute: CollabRoute,
   FeaturedRoute: FeaturedRoute,
   WishlistRoute: WishlistRoute,
   AdminCatalogRoute: AdminCatalogRoute,

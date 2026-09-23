@@ -86,6 +86,16 @@ export function SiteHeader() {
                 >
                   Sản phẩm nổi bật
                 </Link>
+                <Link
+                  to="/collab"
+                  onClick={() => setOpen(false)}
+                  className="border-b border-border py-3 font-display text-lg font-extrabold uppercase flex items-center justify-between text-primary"
+                >
+                  <span>COLLAB</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 border border-primary/20">
+                    Hot
+                  </span>
+                </Link>
                 {NAV.map((item) => (
                   <Link
                     key={item.gender}
@@ -119,6 +129,13 @@ export function SiteHeader() {
               activeProps={{ className: "underline underline-offset-8" }}
             >
               Nổi bật
+            </Link>
+            <Link
+              to="/collab"
+              className="eyebrow text-xs font-black tracking-wider transition-colors text-primary hover:text-primary/80"
+              activeProps={{ className: "underline underline-offset-8" }}
+            >
+              COLLAB
             </Link>
           </nav>
         </div>
